@@ -7,6 +7,8 @@ import sphinx.params.Params
 class SphinxServer(p: Params) {
   def params = p
   
+  val y = 0;// TODO
+  
   private def nenc(idNum: Array[Byte]): Array[Byte] = {
     val id: Array[Byte] = new Array[Byte](p.k)
     id(0) = -1 // two's complement 11111111
