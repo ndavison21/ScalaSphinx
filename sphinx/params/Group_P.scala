@@ -39,5 +39,5 @@ class Group_P extends Group {
 	
 	def inGroup(alpha: BigInt): Boolean = (alpha > 1) && alpha < (p - 1) && ((alpha ^ q % p) == 1)
 	
-	def printable(alpha: BigInt): String = alpha.toString() // TODO: Find out if this should be binary representation
+	override def printable(alpha: BigInt): String = alpha.toString() // TODO: Find out if this should be binary representation
 }

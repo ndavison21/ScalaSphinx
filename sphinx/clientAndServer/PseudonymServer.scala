@@ -6,5 +6,4 @@ class PseudonymServer(sphinxParams: Params) {
   
   
   val params = sphinxParams
-  val pseudonymTo
 }

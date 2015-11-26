@@ -25,18 +25,10 @@ class Params(maxhops: Int, useEcc: Boolean) {
   val clients = new HashMap[String, Client]()
   
   val pseudonymServer = new PseudonymServer(this)  
-  
+
   /**
-   * The Various Hashes Needed
+   * special destination
    */
-  
-  def hash(data: String): Array[Byte] = {
-    val digest = MessageDigest.getInstance("SHA-256");
-    return digest.digest(data.getBytes("UTF-8"));
-  }
-  
-  // Hash of alpha and s to use as a blinding factor
-  def hb(alpha: BigInt, s: BigInt): BigInt = 	return group.makeExp(hash("hb:" + group.printable(alpha) + " , " + group.printable(s)))
-  
-  
+  val dSpecial = new Array[Byte](1)
+  dSpecial(0) = 0
 }

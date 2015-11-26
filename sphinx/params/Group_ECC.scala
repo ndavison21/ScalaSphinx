@@ -39,5 +39,5 @@ class Group_ECC extends Group {
 	
 	def inGroup(alpha: BigInt): Boolean = (alpha > 1) && alpha < (p - 1) && ((alpha ^ q % p) == 1)
 	
-	def printable(alpha: BigInt): String = alpha.toString()
+	override def printable(alpha: BigInt): String = alpha.toString()
 }

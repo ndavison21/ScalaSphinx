@@ -1,6 +1,11 @@
 package sphinx.params
 
 import util.Random
+import javax.crypto.Cipher
+import java.security.Key
+import javax.crypto.spec.SecretKeySpec
+import java.security.MessageDigest
+import javax.crypto.Mac
 
 /**
  * TODO: look into using BitSet instead of Array[Byte]
@@ -39,7 +44,7 @@ object Methods {
     for (i <- msgBody.length + 1 until msgSize)
       paddedMsgBody(i) = -1 // two's complement 11111111
 
-    return paddedMsgBody
+    paddedMsgBody
   }
 
   /**
@@ -55,13 +60,8 @@ object Methods {
         paddingStart(i - 1, msg)
     }
 
-    return msgBody.slice(0, paddingStart(msgBody.length - 1, msgBody))
+    msgBody.slice(0, paddingStart(msgBody.length - 1, msgBody))
   }
-
-  /**
-   * special destination
-   */
-  val dSpecial = 0
 
   /**
    * any other destination
@@ -70,8 +70,7 @@ object Methods {
    */
   def dEnc(destination: Array[Byte]): String = {
     assert(destination.length > 0 && destination.length < 128)
-
-    return destination.length.toChar + byteArrayToString(destination)
+    destination.length.toChar + byteArrayToString(destination)
   }
 
   /**
@@ -81,11 +80,68 @@ object Methods {
     def innerByteArrayToString(i: Int, byteArray: Array[Byte], bitString: String): String = {
       if (i == byteArray.length) bitString
       else
-        innerByteArrayToString(i + 1, byteArray, bitString + byteArray(i).toBinaryString)
+        innerByteArrayToString(i + 1, byteArray, bitString + String.format("%8s", Integer.toBinaryString(byteArray(i) & 0xFF)).replace(' ', '0'))
+        
     }
-    
-    return innerByteArrayToString(0, byteArray, "")
+
+    innerByteArrayToString(0, byteArray, "")
+  }
+
+  def xor(a: Array[Byte], b: Array[Byte]): Array[Byte] = {
+    //require(a.length == b.length, "Byte arrays have to have the same length")
+
+    (a.toList zip b.toList).map(elements => (elements._1 ^ elements._2).toByte).toArray
+  }
+
+  /**
+   * a pseudo random generator
+   */
+  def rho(k: Array[Byte], p: Params): Array[Byte] = {
+    assert(k.length == p.k)
+    val cipher = Cipher.getInstance("AES/CBC/NoPadding") // 128 bit key
+    val key = new SecretKeySpec(k, "AES")
+    cipher.init(Cipher.ENCRYPT_MODE, key)
+    val enc = new Array[Byte](((2 * p.r) + 3) * p.k)
+    for (i <- 0 until enc.length) enc(i) = 0
+    cipher.doFinal(enc)
+  }
+
+  /**
+   * a hash to generate a key for rho()
+   */
+  def rhoKey(s: BigInt, p: Params): Array[Byte] = {
+    val fullHash = hash(byteArrayToString(s.toByteArray))
+    fullHash.slice(0, p.k)
   }
   
+  /**
+   * The MAC, key and output both of length k
+   */
+  def mu(k: Array[Byte], data: Array[Byte], p: Params): Array[Byte] = {
+    assert(k.length == p.k)
+    val mac = Mac.getInstance("HmacSHA1")
+    val key = new SecretKeySpec(k, "HmacSHA1")
+    mac.init(key)
+    mac.doFinal(data)
+  }
+  
+  /**
+   * a hash to generate a key for mu()
+   */
+  def muKey(s: BigInt, p: Params): Array[Byte] = {
+    val fullHash = hash(byteArrayToString(s.toByteArray))
+    fullHash.slice(0, p.k)
+  }
+
+  /**
+   * The Various Hashes Needed
+   */
+  def hash(data: String): Array[Byte] = {
+    val digest = MessageDigest.getInstance("SHA-256");
+    digest.digest(data.getBytes("UTF-8"));
+  }
+
+  // Hash of alpha and s to use as a blinding factor
+  def hb(alpha: BigInt, s: BigInt, p:Params): BigInt = p.group.makeExp(hash("hb:" + p.group.printable(alpha) + " , " + p.group.printable(s)))
 
 }
