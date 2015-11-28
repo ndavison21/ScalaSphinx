@@ -39,5 +39,5 @@ class Group_P extends Group {
 	
 	def inGroup(alpha: BigInt): Boolean = (alpha > 1) && alpha < (p - 1) && ((alpha ^ q % p) == 1)
 	
-	override def printable(alpha: BigInt): String = { Methods.byteArrayToStringOfHex(alpha.toByteArray) }
+	override def printable(alpha: BigInt): String = { Params.byteArrayToStringOfHex(alpha.toByteArray) }
 }

@@ -5,7 +5,7 @@ trait Group {
   
 	def genSecret: BigInt
 	
-	def expon(base: BigInt, power: BigInt)
+	def expon(base: BigInt, power: BigInt): BigInt
 	
 	def multiExpon(base: BigInt, powers: List[BigInt]): BigInt
 	
