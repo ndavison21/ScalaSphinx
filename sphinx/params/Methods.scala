@@ -1,11 +1,14 @@
 package sphinx.params
 
-import util.Random
-import javax.crypto.Cipher
-import java.security.Key
-import javax.crypto.spec.SecretKeySpec
 import java.security.MessageDigest
+
+import scala.util.Random
+
+import edu.biu.scapi.primitives.prf.PseudorandomPermutation
+import edu.biu.scapi.tools.Factories.PrfFactory
+import javax.crypto.Cipher
 import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 /**
  * TODO: look into using BitSet instead of Array[Byte]
@@ -15,7 +18,7 @@ object Methods {
   /**
    * Returns a list of nu random elements of the input (with replacement)
    */
-  def randomSubset[T](list: List[T], nu: Int) = {
+  def randomSubset[T](list: List[T], nu: Int): List[T] = {
 
     def collect(vect: Vector[T], sampleSize: Int, acc: List[T]): List[T] = {
       if (sampleSize == 0) acc
@@ -26,6 +29,19 @@ object Methods {
     }
 
     collect(list toVector, nu, Nil)
+  }
+  
+  def randomSubset[T: ClassManifest](arr: Array[T], nu: Int): Array[T] = {
+    val out = new Array[T](nu)
+    for (i <- 0 to nu) out(i) = arr(Random.nextInt(nu))
+    out
+  }
+  
+  def stringToByteArray(s: String): Array[Byte] = {
+    s.toCharArray.map(_.toByte)
+  }
+  def byteArrayToString(a: Array[Byte]): String = {
+    new String(a.map(_.toChar))
   }
 
   /**
@@ -66,21 +82,30 @@ object Methods {
   /**
    * any other destination
    *
-   * TODO: check type needed of output
+   * TODO: check implementation is correct
    */
-  def dEnc(destination: Array[Byte]): String = {
+  def dEnc(destination: String): Array[Byte] = {
     assert(destination.length > 0 && destination.length < 128)
-    destination.length.toChar + byteArrayToString(destination)
+    
+    destination.length.toByte +: stringToByteArray(destination)
   }
 
-  /**
-   * Used for accessing the node in the pki
-   */
-  def byteArrayToString(byteArray: Array[Byte]): String = {
+  def byteArrayToStringOfBits(byteArray: Array[Byte]): String = {
     def innerByteArrayToString(i: Int, byteArray: Array[Byte], bitString: String): String = {
       if (i == byteArray.length) bitString
       else
         innerByteArrayToString(i + 1, byteArray, bitString + String.format("%8s", Integer.toBinaryString(byteArray(i) & 0xFF)).replace(' ', '0'))
+        
+    }
+
+    innerByteArrayToString(0, byteArray, "")
+  }
+  
+  def byteArrayToStringOfHex(byteArray: Array[Byte]): String = {
+    def innerByteArrayToString(i: Int, byteArray: Array[Byte], hexString: String): String = {
+      if (i == byteArray.length) hexString
+      else
+        innerByteArrayToString(i + 1, byteArray, hexString + String.format("%8s", Integer.toHexString(byteArray(i) & 0xFF)).replace(' ', '0'))
         
     }
 
@@ -110,7 +135,7 @@ object Methods {
    * a hash to generate a key for rho()
    */
   def rhoKey(s: BigInt, p: Params): Array[Byte] = {
-    val fullHash = hash(byteArrayToString(s.toByteArray))
+    val fullHash = hash(byteArrayToStringOfHex(s.toByteArray))
     fullHash.slice(0, p.k)
   }
   
@@ -129,7 +154,42 @@ object Methods {
    * a hash to generate a key for mu()
    */
   def muKey(s: BigInt, p: Params): Array[Byte] = {
-    val fullHash = hash(byteArrayToString(s.toByteArray))
+    val fullHash = hash(byteArrayToStringOfHex(s.toByteArray))
+    fullHash.slice(0, p.k)
+  }
+  
+   /**
+    * a family of pseudo-random permutations (PRPs)
+    * key is of length k, data is of length m
+    */
+  def pi(k: Array[Byte], data: Array[Byte]): Array[Byte] = {
+    val prp = PrfFactory.getInstance.getObject("AES", "OpenSSL")
+                          .asInstanceOf[PseudorandomPermutation]
+    val key = new SecretKeySpec(k, "AES")
+    prp.setKey(key)
+    val out = new Array[Byte](data.length)
+    prp.computeBlock(data, 0, out, 0)
+    out
+  }
+  
+  /**
+   * the inverse of pi
+   */
+  def pii(k: Array[Byte], data: Array[Byte]): Array[Byte] = {
+    val prp: PseudorandomPermutation  = PrfFactory.getInstance.getObject("AES", "OpenSSL")
+                                                    .asInstanceOf[PseudorandomPermutation]
+    val key = new SecretKeySpec(k, "AES")
+    prp.setKey(key)
+    val out = new Array[Byte](data.length)
+    prp.invertBlock(data, 0, out, 0)
+    out
+  }
+  
+  /**
+   * a has to generate a key for pi()
+   */
+  def piKey(s: BigInt, p: Params): Array[Byte] = {
+    val fullHash = hash(byteArrayToStringOfHex(s.toByteArray))
     fullHash.slice(0, p.k)
   }
 

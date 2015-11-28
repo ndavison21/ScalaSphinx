@@ -1,76 +1,61 @@
 package sphinx.clientAndServer
 
-import sphinx.params.Params
-import scala.collection.mutable.ListBuffer
-import sphinx.params.Methods
 import scala.util.Random
+import sphinx.params.Params
+import scala.collection.mutable.HashMap
+import sphinx.params.Methods
 
 class Client {
-  def createMixHeader(destination: Array[Byte], identifier: Array[Byte], nodeIDs: Array[Array[Byte]], params: Params): ((BigInt, Array[Byte], Array[Byte]), Array[BigInt]) = {
-    assert(nodeIDs.length <= params.r)
-    assert(identifier.length == params.k)
-
-    val nu = nodeIDs.length
-
-    val x = params.group.genSecret
-
-    val blinds = new ListBuffer[BigInt]()
-    val asbTuples = new Array[(BigInt, BigInt, BigInt)](nu)
-
-    // Compute the nu (alpha, b, s) tuples
-    for (i <- 0 until nu) {
-      val alpha = params.group.multiExpon(params.group.g, blinds.toList) // group elements
-      val s = params.group.multiExpon(params.pki.get(Methods.byteArrayToString(nodeIDs(i))).get.y, blinds.toList) // D-H Shared secrets
-      val b = Methods.hb(alpha, s, params) // blinding factors
-      blinds.append(b)
-      asbTuples(i) = (alpha, s, b)
-    }
-
-    // Compute the nu filler strings (phi)
-    var prevPhi = new Array[Byte](0);
-    var phi = new Array[Byte](prevPhi.length + (2 * params.k))
-    for (i <- 1 until nu) {
-      phi = new Array[Byte](prevPhi.length + (2 * params.k))
-
-      for (j <- 0 until prevPhi.length) phi(j) = prevPhi(j)
-      for (j <- prevPhi.length until phi.length) phi(j) = 0
-
-      phi = Methods.xor(phi, Methods.rho(Methods.rhoKey(asbTuples(i - 1)._2, params), params)) // TODO: Check this only uses first few bits of second argument
-      prevPhi = phi
-    }
-
-    // Compute the (beta, gamma) tuples
-    val rand = new Array[Byte](((2 * (params.r - nu) + 2) * params.k - destination.length))
-    Random.nextBytes(rand);
-    var beta = destination ++ identifier ++ rand
-    beta = Methods.xor(beta, Methods.rho(Methods.rhoKey(asbTuples(nu - 1)._2, params), params))
-    var gamma = Methods.mu(Methods.muKey(asbTuples(nu - 1)._2, params), beta, params)
-
-    for (i <- nu - 2 to 0) {
-      var id = nodeIDs(i + 1)
-      assert(id.length == params.k)
-      beta = Methods.xor(id ++ gamma ++ beta.slice(0, 2 * (params.r - 1)), Methods.rho(Methods.rhoKey(asbTuples(i)._2, params), params))
-      gamma = Methods.mu(Methods.muKey(asbTuples(nu - 1)._2, params), beta, params)
-    }
-
-    var sSequence = new Array[BigInt](nu)
-    var i = 0
-    asbTuples.foreach((t) => { sSequence(i) = t._2; i += 1 })
-
-    ((asbTuples(0)._1, beta, gamma), sSequence)
+  // Initialising
+  val clientIDbytes = new Array[Byte](4)
+  Random.nextBytes(clientIDbytes)
+  val clientID = Methods.byteArrayToStringOfHex(clientIDbytes)
+  val params = new Params
+  params.clients.put(clientID, this)
+  
+  val keyTable = new HashMap[String, Array[Array[Byte]]]
+  
+  /**
+  * Create a SURB for the given pseudonym (passing through n nodes), and send it to the nymserver.
+  */
+  def createPseudonymReply(pseudonym: Array[Byte], n: Int) {
+    val nodelist = new Array[Array[Byte]](n)
+    var i = 0;
+    Methods.randomSubset(params.pki.keySet.toArray, n).foreach { x => nodelist(i) = Methods.stringToByteArray(x); i+=1 }
+    val (id, keytuple, nymtuple) = ClientMethods.createSurb(clientID, nodelist, params)
+    
+    keyTable.put(Methods.byteArrayToStringOfHex(id), keytuple)
+    params.pseudonymServer.addSurb(pseudonym, nymtuple)
   }
   
-  def creatForwardMessage(message: Array[Byte], destination: Array[Byte], nodeIDs: Array[Array[Byte]], params: Params): (Array[Byte], Array[Byte]) = {
-    assert (params.k + 1 + destination.length + message.length < params.m)
+  /**
+   * Process a (still encrypted) reply message
+   */
+  def process(id: Array[Byte], delta: Array[Byte]) {
+    if (!keyTable.contains(Methods.byteArrayToStringOfHex(id))) {
+      println("Unreadable reply message received by " + this.clientID)
+      return
+    }
+    val keyTuple = keyTable.remove(Methods.byteArrayToStringOfHex(id)).get
+    val ktilde = keyTuple(0)
+    val nu = keyTuple.length - 1
     
-    val nu = nodeIDs.length
+    var delta = new Array[Byte](0)
+    for (i <- nu + 1 to 1) delta = Methods.pi(keyTuple(i), delta)
+    delta = Methods.pii(ktilde, delta)
     
-    val id = new Array[Byte](params.k)
-    for (i <- 0 until id.length) id(i) = 0
-    val (header, secrets) = createMixHeader(params.dSpecial, id, nodeIDs, params)
+    val zeroKey = Array.fill[Byte](params.k)(0)
+    if (zeroKey.deep == delta.slice(0, params.k).deep) {
+      val msg = Methods.unpadMsgBody(delta.slice(params.k, delta.length))
+      println("Message Received by: " + clientID)
+      println("Message: " + Methods.byteArrayToString(msg))
+    }
     
-    val zeroes = new Array[Byte](params.k)
-    for (i <- 0 until zeroes.length) zeroes(i) = 0
-    val body = Methods.padMsgBody(params.m, msgBody)
   }
+  
+  
+  def main(args: Array[String]) {
+    // TODO
+  }
+  
 }

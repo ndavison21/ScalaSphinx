@@ -1,8 +1,10 @@
 package sphinx.clientAndServer
 
-import sphinx.params.Params
-import sphinx.params.Methods
+import scala.math.BigInt.int2bigInt
 import scala.util.Random
+
+import sphinx.params.Methods
+import sphinx.params.Params
 
 object RunTests {
   def main(args: Array[String]) {
@@ -13,44 +15,41 @@ object RunTests {
     
     val p = new Params
     
-    println("Methods.dspecial: " + Methods.dSpecial)
-    println("Methods.byteArrayToString(testArr5): " + Methods.byteArrayToString(testArr5))
+    println("Methods.dspecial: " + p.dSpecial)
+    println("Methods.byteArrayToString(testArr5): " + Methods.byteArrayToStringOfBits(testArr5))
 //    println("Methods.dEnc(testArr5):" + Methods.dEnc(testArr5))
-    println("Methods.hash(\"Hello, World\"): " + Methods.byteArrayToString(Methods.hash("Hello, World")))
+    println("Methods.hash(\"Hello, World\"): " + Methods.byteArrayToStringOfBits(Methods.hash("Hello, World")))
     println("Methods.hb(1, 1, p): " + Methods.hb(1, 1, p))
     
     val muk = Methods.muKey(1, p)
-    println("Methods.muKey(1, p): " + Methods.byteArrayToString(muk))
-    println("Methods.mu(muk, testArr5, p): " + Methods.byteArrayToString(Methods.mu(muk, testArr5, p)))
+    println("Methods.muKey(1, p): " + Methods.byteArrayToStringOfBits(muk))
+    println("Methods.mu(muk, testArr5, p): " + Methods.byteArrayToStringOfBits(Methods.mu(muk, testArr5, p)))
     
     val padded = Methods.padMsgBody(10, testArr5)
-    println("Methods.padMsgBody(10, testArr5): " + Methods.byteArrayToString(padded))
-    println("Methods.unpadMsgBody(padded)    : " + Methods.byteArrayToString(Methods.unpadMsgBody(padded)))
+    println("Methods.padMsgBody(10, testArr5): " + Methods.byteArrayToStringOfBits(padded))
+    println("Methods.unpadMsgBody(padded)    : " + Methods.byteArrayToStringOfBits(Methods.unpadMsgBody(padded)))
     
     var testList:List[Int] = Nil
     for(i <- 0 to 5) testList = testList ::: List(i)
     println("Methods.randomSubset(testList, 3): " + Methods.randomSubset(testList, 3))
     
     val rhok = Methods.rhoKey(1, p)
-    println("Methods.rhoKey(1, p): " + Methods.byteArrayToString(rhok))
-    println("Methods.rho(rhok, p): " + Methods.byteArrayToString(Methods.rho(rhok, p)))
+    println("Methods.rhoKey(1, p): " + Methods.byteArrayToStringOfBits(rhok))
+    println("Methods.rho(rhok, p): " + Methods.byteArrayToStringOfBits(Methods.rho(rhok, p)))
     
-    println("Methods.xor(testArr5, testArr20): " + Methods.byteArrayToString(Methods.xor(testArr5, testArr20)))
+    println("Methods.xor(testArr5, testArr20): " + Methods.byteArrayToStringOfBits(Methods.xor(testArr5, testArr20)))
     
+    val s = Methods.byteArrayToString(testArr5)
+    println("Methods.byteArrayToString(testArr5): " + s)
+    println("testArr5:                            " + Methods.byteArrayToStringOfBits(testArr5))
+    println("Methods.byteArrayToString(testArr5): " + Methods.byteArrayToStringOfBits(Methods.stringToByteArray(s)))
     
-//    val client = new Client
-//    var testArr5x5 = new Array[Array[Byte]](5);
-//    val testArrk = new Array[Byte](p.k)
-//    Random.nextBytes(testArrk)
-//    for (i <- 0 until 5) testArr5x5(i) = testArr5 
-//    val ((a, b, c), s) = client.createMixHeader(testArr5, testArrk, testArr5x5, p)
-//    println("*********")
-//    println("alpha0: " + a)
-//    println("beta0 : " + Methods.byteArrayToString(b))
-//    println("gamma0: " + Methods.byteArrayToString(c))
-//    print("s sequence: ")
-//    s.foreach { x => print(x) + "', " }
-//    println
+//    val pik = Methods.piKey(1, p)
+//    println("Methods.piKey(1, p): " + Methods.byteArrayToStringOfBits(pik))
+//    val permuteArr5 = Methods.pi(pik, testArr5)
+//    println("Methods.pi(pik, p): " + Methods.byteArrayToStringOfBits(permuteArr5))
+//    println("Methods.pii(pik, permuteArr5): " + Methods.byteArrayToStringOfBits(Methods.pii(pik,permuteArr5)))
+    
    
   }
 }
