@@ -1,16 +1,18 @@
 package sphinx.params
 
-import scala.collection.mutable.HashMap
-import sphinx.clientAndServer.Client
-import sphinx.clientAndServer.SphinxServer
-import sphinx.clientAndServer.PseudonymServer
 import java.security.MessageDigest
+
+import scala.collection.mutable.HashMap
+import scala.util.Random
+
 import edu.biu.scapi.primitives.prf.PseudorandomPermutation
 import edu.biu.scapi.tools.Factories.PrfFactory
 import javax.crypto.Cipher
-import javax.crypto.spec.SecretKeySpec
-import scala.util.Random
 import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
+import sphinx.clientAndServer.Client
+import sphinx.clientAndServer.PseudonymServer
+import sphinx.clientAndServer.SphinxServer
 
 object Params {
   val k = 16 // security parameter, in bytes (16 bytes = 128 bits)
@@ -112,16 +114,13 @@ object Params {
   }
 
   def byteArrayToStringOfHex(byteArray: Array[Byte]): String = {
-    def innerByteArrayToString(i: Int, byteArray: Array[Byte], hexString: String): String = {
-      if (i == byteArray.length) hexString
-      else
-        innerByteArrayToString(i + 1, byteArray, hexString + String.format("%02X", new Integer(byteArray(i) & 0xFF)))
-
-    }
-
-    innerByteArrayToString(0, byteArray, "")
+    byteArray.map("%02x".format(_)).mkString
   }
 
+  def stringOfHexToByteArray(hexString: String): Array[Byte] = {
+    hexString.replaceAll("[^0-9A-Fa-f]", "").sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte)
+  }
+  
   def xor(a: Array[Byte], b: Array[Byte]): Array[Byte] = {
     //require(a.length == b.length, "Byte arrays have to have the same length")
 

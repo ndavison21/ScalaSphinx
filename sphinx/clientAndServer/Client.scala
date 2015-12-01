@@ -22,8 +22,8 @@ object Client {
     // Compute the nu (alpha, b, s) tuples
     for (i <- 0 until nu) {
       val alpha = params.group.multiExpon(params.group.g, blinds.toList) // group elements
-      val s = params.group.multiExpon(
-                            Params.pki.get(Params.byteArrayToStringOfHex(nodeIDs(i))).get.y, blinds.toList) // D-H Shared secrets
+      val base = Params.pki.get(Params.byteArrayToStringOfHex(nodeIDs(i)))
+      val s = params.group.multiExpon(base.get.y, blinds.toList) // D-H Shared secrets
       val b = Params.hb(alpha, s, params) // blinding factors
       blinds.append(b)
       asbTuples(i) = (alpha, s, b)

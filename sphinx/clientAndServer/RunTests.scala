@@ -17,7 +17,10 @@ object RunTests {
   
       println("Params.dspecial: " + Params.dSpecial)
       println("Params.byteArrayToStringOfBits(testArr5): " + Params.byteArrayToStringOfBits(testArr5))
-      println("Params.byteArrayToStringOfHex(testArr5): " + Params.byteArrayToStringOfHex(testArr5))
+      val testArr5HexString = Params.byteArrayToStringOfHex(testArr5)
+      println("Params.byteArrayToStringOfHex(testArr5): " + testArr5HexString)
+      println("testArr5:                                         " + Params.byteArrayToStringOfBits(testArr5))
+      println("Params.stringOfHexToByteArray(testArr5HexString): " + Params.byteArrayToStringOfBits(Params.stringOfHexToByteArray(testArr5HexString))) 
       //    println("Params.dEnc(testArr5):" + Params.dEnc(testArr5))
       println("Params.hash(\"Hello, World\"): " + Params.byteArrayToStringOfBits(Params.hash("Hello, World")))
       println("Params.hb(1, 1, p): " + Params.hb(1, 1, p))
@@ -42,15 +45,25 @@ object RunTests {
   
       val s = Params.byteArrayToString(testArr5)
       println("Params.byteArrayToString(testArr5): " + s)
-      println("testArr5:                            " + Params.byteArrayToStringOfBits(testArr5))
+      println("testArr5:                           " + Params.byteArrayToStringOfBits(testArr5))
       println("Params.byteArrayToString(testArr5): " + Params.byteArrayToStringOfBits(Params.stringToByteArray(s)))
-  
-      //    val pik = Params.piKey(1, p)
-      //    println("Params.piKey(1, p): " + Params.byteArrayToStringOfBits(pik))
-      //    val permuteArr5 = Params.pi(pik, testArr5)
-      //    println("Params.pi(pik, p): " + Params.byteArrayToStringOfBits(permuteArr5))
-      //    println("Params.pii(pik, permuteArr5): " + Params.byteArrayToStringOfBits(Params.pii(pik,permuteArr5)))
+ 
 
+    }
+    
+    def testPRP {
+      val testArr5 = new Array[Byte](5)
+      Random.nextBytes(testArr5)
+      val testArr20 = new Array[Byte](20)
+      Random.nextBytes(testArr20)
+  
+      val p = new Params
+      
+      val pik = Params.piKey(1, p)
+      println("Params.piKey(1, p): " + Params.byteArrayToStringOfBits(pik))
+      val permuteArr5 = Params.pi(pik, testArr5)
+      println("Params.pi(pik, p): " + Params.byteArrayToStringOfBits(permuteArr5))
+      println("Params.pii(pik, permuteArr5): " + Params.byteArrayToStringOfBits(Params.pii(pik, permuteArr5)))
     }
     
     def testSystem(args: Array[String]) {
@@ -62,14 +75,13 @@ object RunTests {
       // Create some sphinx servers (they add themselves to the pki)
       for (i <- 0 to r * 2)  {
         new SphinxServer(p)
-        println("Params.pki.size = " + Params.pki.size)
       }
 
       // Create a client
       val client = new Client(p)
 
       val useNodes = Params.randomSubset(Params.pki.keySet.toArray, r)
-      val (header, delta) = Client.creatForwardMessage(Params.stringToByteArray("This is a test"), "dest", useNodes.map { x => Params.stringToByteArray(x) }, p)
+      val (header, delta) = Client.creatForwardMessage(Params.stringToByteArray("This is a test"), "dest", useNodes.map { x => Params.stringOfHexToByteArray(x) }, p)
 
       // Send it to the first node for processing
       Params.pki.get(useNodes(0)).get.process(header, delta)
@@ -83,7 +95,8 @@ object RunTests {
     }
     
     // testParamsMethods
-    testSystem(new Array[String](0))
+    testPRP
+    //testSystem(new Array[String](0))
 
   }
 }
