@@ -26,6 +26,7 @@ class PseudonymServer{
         val (n0, header0, ktilde) = l.remove(0)
         val zeroes = Array.fill[Byte](Params.k)(0)
         val body = Params.pi(ktilde, Params.padMsgBody(Params.m, zeroes ++ message))
+        println("Pseudonym server: forwarding to client")
         Params.pki.get(Params.byteArrayToStringOfHex(n0)).get.process(header0, body)
         
         if (l.length > 0) db.put(nym, l)

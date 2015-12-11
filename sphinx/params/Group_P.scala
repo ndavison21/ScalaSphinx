@@ -22,22 +22,21 @@ class Group_P extends Group {
 	  return BigInt.apply(1, random) % q
 	}
 	
-	def expon(base: BigInt, power: BigInt) = (base ^ power) % p
+	def expon(base: BigInt, power: BigInt): BigInt = if (power < Integer.MAX_VALUE) base.pow(power.toInt) else { println("Power too large, returning -1"); -1 } // Throw exception ?
 	
 	def multiExpon(base: BigInt, powers: List[BigInt]): BigInt = {
 	  def product(pwrs: List[BigInt], acc: BigInt): BigInt = {
 	    pwrs match {
 	      case Nil => acc
-	      case x :: tail => product(tail, (acc * x) % q)
+	      case x :: tail => product(tail, (acc * x))
 	    }
 	  }
-	  
-	  return (base ^ product(powers, 1) % p)
+	  return expon(base, product(powers, 1))
 	}
 	
 	def makeExp(data: Array[Byte]): BigInt = BigInt.apply(1, data) % q
 	
-	def inGroup(alpha: BigInt): Boolean = (alpha > 1) && alpha < (p - 1) && ((alpha ^ q % p) == 1)
+	def inGroup(alpha: BigInt): Boolean = (alpha > 1) && alpha < (p - 1) && ((expon(alpha, q) % p) == 1)
 	
 	override def printable(alpha: BigInt): String = { Params.byteArrayToStringOfHex(alpha.toByteArray) }
 }

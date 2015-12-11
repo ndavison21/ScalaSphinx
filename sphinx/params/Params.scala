@@ -1,18 +1,15 @@
 package sphinx.params
 
 import java.security.MessageDigest
-
 import scala.collection.mutable.HashMap
 import scala.util.Random
-
-import edu.biu.scapi.primitives.prf.PseudorandomPermutation
-import edu.biu.scapi.tools.Factories.PrfFactory
 import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.spec.SecretKeySpec
 import sphinx.clientAndServer.Client
 import sphinx.clientAndServer.PseudonymServer
 import sphinx.clientAndServer.SphinxServer
+import javax.crypto.spec.IvParameterSpec
 
 object Params {
   val k = 16 // security parameter, in bytes (16 bytes = 128 bits)
@@ -91,17 +88,6 @@ object Params {
     msgBody.slice(0, paddingStart(msgBody.length - 1, msgBody))
   }
 
-  /**
-   * any other destination
-   *
-   * TODO: check implementation is correct
-   */
-  def dEnc(destination: String): Array[Byte] = {
-    assert(destination.length > 0 && destination.length < 128)
-
-    destination.length.toByte +: stringToByteArray(destination)
-  }
-
   def byteArrayToStringOfBits(byteArray: Array[Byte]): String = {
     def innerByteArrayToString(i: Int, byteArray: Array[Byte], bitString: String): String = {
       if (i == byteArray.length) bitString
@@ -120,7 +106,7 @@ object Params {
   def stringOfHexToByteArray(hexString: String): Array[Byte] = {
     hexString.replaceAll("[^0-9A-Fa-f]", "").sliding(2, 2).toArray.map(Integer.parseInt(_, 16).toByte)
   }
-  
+
   def xor(a: Array[Byte], b: Array[Byte]): Array[Byte] = {
     //require(a.length == b.length, "Byte arrays have to have the same length")
 
@@ -129,12 +115,16 @@ object Params {
 
   /**
    * a pseudo random generator
+   * 
+   * output is of length (2*r+3)*k
    */
   def rho(k: Array[Byte], p: Params): Array[Byte] = {
     assert(k.length == Params.k)
+    
+    val ivSpec = new IvParameterSpec(Array.fill(Params.k)(0.asInstanceOf[Byte]))
     val cipher = Cipher.getInstance("AES/CBC/NoPadding") // 128 bit key
     val key = new SecretKeySpec(k, "AES")
-    cipher.init(Cipher.ENCRYPT_MODE, key)
+    cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec)
     val enc = new Array[Byte](((2 * p.r) + 3) * Params.k)
     for (i <- 0 until enc.length) enc(i) = 0
     cipher.doFinal(enc)
@@ -144,7 +134,7 @@ object Params {
    * a hash to generate a key for rho()
    */
   def rhoKey(s: BigInt, p: Params): Array[Byte] = {
-    val fullHash = hash(byteArrayToStringOfHex(s.toByteArray))
+    val fullHash = hash(s.toByteArray)
     fullHash.slice(0, Params.k)
   }
 
@@ -163,60 +153,87 @@ object Params {
    * a hash to generate a key for mu()
    */
   def muKey(s: BigInt, p: Params): Array[Byte] = {
-    val fullHash = hash(byteArrayToStringOfHex(s.toByteArray))
+    val fullHash = hash(s.toByteArray)
     fullHash.slice(0, Params.k)
   }
 
   /**
-   * a family of pseudo-random permutations (PRPs)
    * key is of length k, data is of length m
    */
-  def pi(k: Array[Byte], data: Array[Byte]): Array[Byte] = {
-    val prp = PrfFactory.getInstance.getObject("AES", "OpenSSL")
-      .asInstanceOf[PseudorandomPermutation]
-    val key = new SecretKeySpec(k, "AES")
-    prp.setKey(key)
-    val out = new Array[Byte](data.length)
-    prp.computeBlock(data, 0, out, 0)
-    out
+  def pi(key: Array[Byte], data: Array[Byte]): Array[Byte] = {
+    assert(data.length >= 2 * k)
+    assert(key.length == k)
+
+    var l = data.slice(0, k)
+    var r = data.slice(k, data.length)
+    val k1, k3 = key
+    
+    r = xor(r, hash(xor(l, k1)))
+    val k2 = xor(r.slice(r.length - k, r.length), k1)
+    l = xor(l, keyedHash(k2, r))
+    r = xor(r, hash(xor(l, k3)))
+    val k4 = xor(r.slice(r.length - k, r.length), k3)
+    l = xor(l, keyedHash(k4, r))
+    
+    l ++ r
   }
 
   /**
    * the inverse of pi
    */
-  def pii(k: Array[Byte], data: Array[Byte]): Array[Byte] = {
-    val prp: PseudorandomPermutation = PrfFactory.getInstance.getObject("AES", "OpenSSL")
-      .asInstanceOf[PseudorandomPermutation]
-    val key = new SecretKeySpec(k, "AES")
-    prp.setKey(key)
-    val out = new Array[Byte](data.length)
-    prp.invertBlock(data, 0, out, 0)
-    out
+  def pii(key: Array[Byte], data: Array[Byte]): Array[Byte] = {
+    assert(data.length >= 2 * k)
+    assert(key.length == k)
+
+    var l = data.slice(0, k)
+    var r = data.slice(k, data.length)
+
+    val k1, k3 = key
+
+    val k4 = xor(r.slice(r.length - k, r.length), k3)
+    l = xor(l, keyedHash(k4, r))
+    r = xor(r, hash(xor(l, k3)))
+    val k2 = xor(r.slice(r.length - k, r.length), k1)
+    l = xor(l, keyedHash(k2, r))
+    r = xor(r, hash(xor(l, k1)))
+    
+    l ++ r
   }
 
   /**
    * Hash for deciding if a node has seen a secret before
    */
-  def tauHash(s: BigInt, p: Params): Array[Byte] = hash("tauHash:" + p.group.printable(s))
+  def tauHash(s: BigInt, p: Params): Array[Byte] = hash(s.toByteArray)
 
   /**
-   * a has to generate a key for pi()
+   * generate a key for pi
    */
   def piKey(s: BigInt, p: Params): Array[Byte] = {
-    val fullHash = hash(byteArrayToStringOfHex(s.toByteArray))
+    val fullHash = hash(s.toByteArray)
     fullHash.slice(0, Params.k)
   }
 
   /**
    * The Hashes Needed
    */
-  def hash(data: String): Array[Byte] = {
+  def hash(data: Array[Byte]): Array[Byte] = {
     val digest = MessageDigest.getInstance("SHA-256");
-    digest.digest(data.getBytes("UTF-8"));
+    digest.digest(data);
+  }
+
+  def keyedHash(k: Array[Byte], data: Array[Byte]): Array[Byte] = {
+    assert(k.length == Params.k)
+
+    val ivSpec = new IvParameterSpec(Array.fill(Params.k)(0.asInstanceOf[Byte]))
+    
+    val cipher = Cipher.getInstance("AES/CTR/NoPadding") // 128 bit key
+    val key = new SecretKeySpec(k, "AES")
+    cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec)
+    cipher.doFinal(data)
   }
 
   // Hash of alpha and s to use as a blinding factor
-  def hb(alpha: BigInt, s: BigInt, p: Params): BigInt = p.group.makeExp(hash("hb:" + p.group.printable(alpha) + " , " + p.group.printable(s)))
+  def hb(alpha: BigInt, s: BigInt, p: Params): BigInt = p.group.makeExp(hash(alpha.toByteArray ++ s.toByteArray))
 
 }
 
