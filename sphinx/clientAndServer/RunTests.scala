@@ -2,11 +2,15 @@ package sphinx.clientAndServer
 
 import scala.math.BigInt.int2bigInt
 import scala.util.Random
-
 import sphinx.params.Params
+import java.io.PrintStream
+import java.io.FileOutputStream
+import java.io.BufferedOutputStream
+import java.util.Calendar
 
 object RunTests {
   def main(args: Array[String]) {
+    
     def testParamsMethods {
       val testArr5 = new Array[Byte](5)
       Random.nextBytes(testArr5)
@@ -25,9 +29,11 @@ object RunTests {
 //      println("Params.hash(\"Hello, World\"): " + Params.byteArrayToStringOfBits(Params.hash(Params.stringToByteArray("Hello, World"))))
 //      println("Params.hb(1, 1, p): " + Params.hb(1, 1, p))
 //  
-//      val muk = Params.muKey(1, p)
-//      println("Params.muKey(1, p): " + Params.byteArrayToStringOfBits(muk))
-//      println("Params.mu(muk, testArr5, p): " + Params.byteArrayToStringOfBits(Params.mu(muk, testArr5, p)))
+      val muk = Params.muKey(1, p)
+      println("Params.muKey(1, p): " + Params.byteArrayToStringOfBits(muk))
+      println("Params.mu(muk, testArr5, p): " + Params.byteArrayToStringOfBits(Params.mu(muk, testArr5, p)))
+      println("Params.mu(muk, testArr5, p): " + Params.byteArrayToStringOfBits(Params.mu(muk, testArr5, p)))
+      
 //  
 //      val padded = Params.padMsgBody(10, testArr5)
 //      println("Params.padMsgBody(10, testArr5): " + Params.byteArrayToStringOfBits(padded))
@@ -37,12 +43,12 @@ object RunTests {
 //      for (i <- 0 to 5) testList = testList ::: List(i)
 //      println("Params.randomSubset(testList, 3): " + Params.randomSubset(testList, 3))
 //  
-      val rhok = Params.rhoKey(1, p)
-      println("Params.rhoKey(1, p): " + Params.byteArrayToStringOfHex(rhok))
-      println("Params.rho(rhok, p): " + Params.byteArrayToStringOfHex(Params.rho(rhok, p)))
-      println("Params.rho(rhok, p): " + Params.byteArrayToStringOfHex(Params.rho(rhok, p)))
-      println("Params.rho(rhok, p): " + Params.byteArrayToStringOfHex(Params.rho(rhok, p)))
-      println("Params.rho(rhok, p): " + Params.byteArrayToStringOfHex(Params.rho(rhok, p)))
+//      val rhok = Params.rhoKey(1, p)
+//      println("Params.rhoKey(1, p): " + Params.byteArrayToStringOfHex(rhok))
+//      println("Params.rho(rhok, p): " + Params.byteArrayToStringOfHex(Params.rho(rhok, p)))
+//      println("Params.rho(rhok, p): " + Params.byteArrayToStringOfHex(Params.rho(rhok, p)))
+//      println("Params.rho(rhok, p): " + Params.byteArrayToStringOfHex(Params.rho(rhok, p)))
+//      println("Params.rho(rhok, p): " + Params.byteArrayToStringOfHex(Params.rho(rhok, p)))
 //  
 //      println("Params.xor(testArr5, testArr20): " + Params.byteArrayToStringOfBits(Params.xor(testArr5, testArr20)))
 //  
@@ -92,22 +98,29 @@ object RunTests {
       val client = new Client(p)
 
       val useNodes = Params.randomSubset(Params.pki.keySet.toArray, r)
+      println("Creating forward message")
       val (header, delta) = Client.creatForwardMessage(Params.stringToByteArray("This is a test"), Params.stringToByteArray("dest"), useNodes.map { x => Params.stringOfHexToByteArray(x) }, p)
-
+      println("Finished Creating forward message")
+      
       // Send it to the first node for processing
+      println
+      println("Processing message")
       Params.pki.get(useNodes(0)).get.process(header, delta)
+      println("Finished Processing Message")
 
       // Create a reply block for the client
-      client.createPseudonymReply(Params.stringToByteArray("nd359"), r)
+      //client.createPseudonymReply(Params.stringToByteArray("nd359"), r)
 
       // Send a message to it
-      Params.pseudonymServer.sendToPseudonym(Params.stringToByteArray("nd359"), Params.stringToByteArray("This is a reply test"))
+      //Params.pseudonymServer.sendToPseudonym(Params.stringToByteArray("nd359"), Params.stringToByteArray("This is a reply test"))
 
     }
     
-    testParamsMethods
+    println(Calendar.getInstance.getTime)
+    
+    //testParamsMethods
     // testPRP
-    //testSystem(new Array[String](0))
+    testSystem(new Array[String](0))
 
   }
 }

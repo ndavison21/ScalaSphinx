@@ -60,14 +60,12 @@ object Params {
    * msgBody: the current body, padding is added as a 0 followed by as many 1's as the message needs to be padded to
    */
   def padMsgBody(msgSize: Int, msgBody: Array[Byte]): Array[Byte] = {
-    val paddedMsgBody: Array[Byte] = new Array[Byte](msgSize)
+    val paddedMsgBody: Array[Byte] = Array.fill[Byte](msgSize)((-1).asInstanceOf[Byte])
 
     for (i <- 0 until msgBody.length) // 'until' goes to msgBody.length - 1, 'to' goes to msgBody.length
       paddedMsgBody(i) = msgBody(i)
 
     paddedMsgBody(msgBody.length) = 127 // two's complement 01111111
-    for (i <- msgBody.length + 1 until msgSize)
-      paddedMsgBody(i) = -1 // two's complement 11111111
 
     paddedMsgBody
   }
@@ -79,13 +77,14 @@ object Params {
    */
   def unpadMsgBody(msgBody: Array[Byte]): Array[Byte] = {
 
-    def paddingStart(i: Int, msg: Array[Byte]): Int = {
-      if (msg(i) == 127) i
+    def paddingStart(i: Int): Int = {
+      if (i<0) return msgBody.length
+      else if (msgBody(i) == 127) return i
       else
-        paddingStart(i - 1, msg)
+        paddingStart(i - 1)
     }
 
-    msgBody.slice(0, paddingStart(msgBody.length - 1, msgBody))
+    msgBody.slice(0, paddingStart(msgBody.length - 1))
   }
 
   def byteArrayToStringOfBits(byteArray: Array[Byte]): String = {
@@ -121,13 +120,14 @@ object Params {
   def rho(k: Array[Byte], p: Params): Array[Byte] = {
     assert(k.length == Params.k)
     
-    val ivSpec = new IvParameterSpec(Array.fill(Params.k)(0.asInstanceOf[Byte]))
+    val ivSpec = new IvParameterSpec(Array.fill[Byte](Params.k)(0.asInstanceOf[Byte]))
     val cipher = Cipher.getInstance("AES/CBC/NoPadding") // 128 bit key
     val key = new SecretKeySpec(k, "AES")
     cipher.init(Cipher.ENCRYPT_MODE, key, ivSpec)
-    val enc = new Array[Byte](((2 * p.r) + 3) * Params.k)
-    for (i <- 0 until enc.length) enc(i) = 0
-    cipher.doFinal(enc)
+    
+    val enc = Array.fill[Byte](((2 * p.r) + 3) * Params.k)(0.asInstanceOf[Byte])
+    val out = cipher.doFinal(enc)
+    out.slice(0, ((2 * p.r) + 3) * Params.k)
   }
 
   /**
@@ -143,10 +143,10 @@ object Params {
    */
   def mu(k: Array[Byte], data: Array[Byte], p: Params): Array[Byte] = {
     assert(k.length == Params.k)
-    val mac = Mac.getInstance("HmacSHA1")
-    val key = new SecretKeySpec(k, "HmacSHA1")
+    val mac = Mac.getInstance("HmacSHA256")
+    val key = new SecretKeySpec(k, "HmacSHA256")
     mac.init(key)
-    mac.doFinal(data)
+    mac.doFinal(data).slice(0, Params.k)
   }
 
   /**
@@ -203,7 +203,10 @@ object Params {
   /**
    * Hash for deciding if a node has seen a secret before
    */
-  def tauHash(s: BigInt, p: Params): Array[Byte] = hash(s.toByteArray)
+  def tauHash(s: BigInt, p: Params): Array[Byte] = {
+    val fullHash = hash(s.toByteArray)
+    fullHash.slice(0, 2 * Params.k)
+  }
 
   /**
    * generate a key for pi

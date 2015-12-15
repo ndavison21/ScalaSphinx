@@ -12,13 +12,15 @@ object Client {
    * used as a subroutine to make forward messages and single-use reply blocks
    */
   def createMixHeader(destination: Array[Byte], identifier: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): ((BigInt, Array[Byte], Array[Byte]), Array[BigInt]) = {
+    println
+    assert(destination.length <= (2 * (p.r - nodeIDs.length) + 2) * Params.k)
     assert(nodeIDs.length <= p.r)
     assert(identifier.length == Params.k)
 
     val nu = nodeIDs.length
 
     val x = p.group.genSecret // TODO: Looks at the maths for this
-
+    println("x: " + x)
     // Compute the nu (alpha, b, s) tuples
     /**
      * a(0) = g^x, s(0)=y(n(0))^x, b(0)=hb(a(0),s(0))
@@ -30,10 +32,13 @@ object Client {
      * s(i): the Diffie-Hellman shared secrets
      * b(i): the blinding factors
      */
-    def computeNext(i: Integer, blinds: List[BigInt]):(BigInt,BigInt,BigInt) = {
+    def computeASB(i: Integer, blinds: List[BigInt]):(BigInt,BigInt,BigInt) = {
       val alpha  = p.group.multiExpon(p.group.g, blinds)
+      println("node " + i + ": " + Params.byteArrayToStringOfHex(nodeIDs(i)))
+      println("alpha " + i + ": " + alpha)
       val node   = Params.pki.get(Params.byteArrayToStringOfHex(nodeIDs(i))).get
       val secret = p.group.multiExpon(node.y, blinds)
+      println("secret " + i + ": " + secret)
       val blind  = Params.hb(alpha, secret, p)
       (alpha, secret, blind)
     }
@@ -42,34 +47,43 @@ object Client {
     val asbTuples = new Array[(BigInt, BigInt, BigInt)](nu)
     
     for (i <- 0 until nu) { // TODO: do this in a properly functional way (recursively)
-      val (a, s, b) = computeNext(i, blinds)
+      val (a, s, b) = computeASB(i, blinds)
       blinds = b :: blinds
       asbTuples(i) = (a, s, b)
     }
 
     // Compute the nu filler strings (phi)
     // call using phiNu(0, new Array[Byte](0))
-    def compPhi(i: Integer, prevPhi: Array[Byte]): Array[Byte] = {
-      if (i == nu) prevPhi
-      val phi1 = prevPhi ++ Array.fill(2 * Params.k)(0.asInstanceOf[Byte])
+    def compPhi(i: Int, prevPhi: Array[Byte]): Array[Byte] = {
+      assert(prevPhi.length == 2*i*Params.k)
+      if (i == nu) return prevPhi
+      val phi1 = prevPhi ++ Array.fill[Byte](2 * Params.k)(0.asInstanceOf[Byte])
       val phi2 = Params.rho(Params.rhoKey(asbTuples(i)._2, p), p)
       compPhi(i+1, Params.xor(phi1, phi2.slice(phi2.length - (2 * (i+1) * Params.k), phi2.length)))
     }
 
     // Compute the M = (alpha, beta, gamma) message headers
     def compHeader(i: Integer, prevBeta: Array[Byte], prevGamma: Array[Byte]): (BigInt, Array[Byte], Array[Byte]) = {
-      if (i<0) (asbTuples(0)._1, prevBeta, prevGamma)
-      val beta1 = nodeIDs(i+1) ++ prevGamma ++ prevBeta.slice(0, (2*p.r - 1) * (Params.k-1))
-      val beta2 = Params.rho(Params.rhoKey(asbTuples(i)._2, p), p)
-      val beta = Params.xor(beta1, beta2.slice(0, (2*p.r - 1) * (Params.k-1)))
+      if (i<0) return (asbTuples(0)._1, prevBeta, prevGamma)
+      val beta1 = nodeIDs(i+1) ++ prevGamma ++ prevBeta.slice(0, (2*p.r - 1) * Params.k)
+      assert(beta1.length == (2 * p.r +1) * Params.k)
+      val beta2 = Params.rho(Params.rhoKey(asbTuples(i)._2, p), p).slice(0, (2 * p.r +1) * Params.k)
+//      println("beta l: " + Params.byteArrayToStringOfHex(beta1))
+//      println("beta r: " + Params.byteArrayToStringOfHex(beta2))
+      val beta = Params.xor(beta1, beta2)
       val gamma = Params.mu(Params.muKey(asbTuples(i)._2, p), beta, p)
+      println("beta " + i + ": " + Params.byteArrayToStringOfHex(beta))
+      //println("s " + i + ": " + asbTuples(i)._2)
+      //println("gamma " + i + ": " + Params.byteArrayToStringOfHex(gamma))
       compHeader(i-1, beta, gamma)
     }
     
-    val phi = compPhi(0, new Array[Byte](0))
-    val betaNu = destination ++ identifier ++ Array.fill((2 * (p.r - nu) + 2) * Params.k - destination.length)(0.asInstanceOf[Byte])
+    val phi = compPhi(0, new Array[Byte](0))    
+    val betaNu1 = destination ++ identifier ++ Array.fill[Byte]((2 * (p.r - nu) + 2) * Params.k - destination.length)(0.asInstanceOf[Byte])
+    val betaNu2 = Params.rho(Params.rhoKey(asbTuples(nu-1)._2, p), p).slice(0, (2 * p.r + 1) * Params.k)
+    val betaNu = Params.xor(betaNu1, betaNu2) ++ phi
     val gammaNu = Params.mu(Params.muKey(asbTuples(nu-1)._2, p), betaNu, p)
-    val m = compHeader(nu-1, betaNu, gammaNu)
+    val m = compHeader(nu-2, betaNu, gammaNu)
     
     var sSequence = new Array[BigInt](nu)
     var i = 0
@@ -94,7 +108,7 @@ object Client {
     val (header, secrets) = createMixHeader(Params.dSpecial, id, nodeIDs, p)
 
     def compDelta(i: Integer, prevDelta: Array[Byte]): Array[Byte] = {
-      if (i<0) prevDelta
+      if (i<0) return prevDelta
       compDelta(i-1, Params.pi(Params.piKey(secrets(i), p), prevDelta))
     }
     
