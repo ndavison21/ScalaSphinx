@@ -16,7 +16,7 @@ object Params {
   val m = 1024 // size of the message body, in bytes. This needs to be kept constant in order to prevent attackers being able to correlate message length with number of hops
   val pki = new HashMap[String, SphinxServer] // public key infrastructure, mapping of server ID to server, we generate the String using the Byte.toBinaryString method
   val clients = new HashMap[String, Client]
-  val pseudonymServer = new PseudonymServer()
+  val pseudonymServer = new PseudonymServer
 
   /**
    * special destination
@@ -24,6 +24,16 @@ object Params {
   val dSpecial = new Array[Byte](1)
   dSpecial(0) = 0
 
+  /**
+   * any other destination
+   * prefixes the destination with its length
+   */
+  def destinationEncode(dest: Array[Byte]): Array[Byte] = {
+    assert(dest.length >=1)
+    assert(dest.length <=127)
+    dest.length.asInstanceOf[Byte] +: dest
+  }
+  
   /**
    * Returns a list of nu random elements of the input (with replacement)
    */
@@ -62,7 +72,7 @@ object Params {
   def padMsgBody(msgSize: Int, msgBody: Array[Byte]): Array[Byte] = {
     val paddedMsgBody: Array[Byte] = Array.fill[Byte](msgSize)((-1).asInstanceOf[Byte])
 
-    for (i <- 0 until msgBody.length) // 'until' goes to msgBody.length - 1, 'to' goes to msgBody.length
+    for (i <- 0 until msgBody.length)
       paddedMsgBody(i) = msgBody(i)
 
     paddedMsgBody(msgBody.length) = 127 // two's complement 01111111
