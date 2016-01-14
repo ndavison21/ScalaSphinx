@@ -10,10 +10,9 @@ import sphinx.params.Params
 import scala.collection.mutable.HashSet
 
 class SphinxServer(p: Params) {
-  val debug = false
-  
+
   val params = p
-  
+
   // Generating identifier
   val genId = new Array[Byte](5)
   Random.nextBytes(genId)
@@ -21,10 +20,10 @@ class SphinxServer(p: Params) {
   assert(id.length == Params.k)
   assert(id(0) == -1)
   val name = "node " + Params.byteArrayToStringOfHex(id)
-  
+
   private val x = params.group.genSecret // private key
   val y = params.group.expon(params.group.g, x) // public key TODO: check this is in the cyclic group
-  
+
   val seen = new HashSet[String]
   Params.pki.put(Params.byteArrayToStringOfHex(id), this)
 
@@ -48,11 +47,10 @@ class SphinxServer(p: Params) {
   }
 
   def process(header: (BigInt, Array[Byte], Array[Byte]), delta: Array[Byte]) {
-    if (debug) println
     println("Processing at server: " + name)
 
     val (alpha, beta, gamma) = header
-    
+
     // Check that alpha is in the group
     assert((params.group.inGroup(alpha)))
     assert(beta.length == (2 * p.r + 1) * Params.k)
@@ -60,10 +58,6 @@ class SphinxServer(p: Params) {
 
     // Compute the shared secret
     val s = params.group.expon(alpha, x)
-
-    if (debug) println("alpha  : " + alpha)
-    if (debug) println("secret  : " + s)
-    if (debug) println("beta:   " + Params.byteArrayToStringOfHex(beta))
 
     // Have we seen it already?
     val tag = Params.byteArrayToStringOfHex(Params.tauHash(s, params))
@@ -76,10 +70,11 @@ class SphinxServer(p: Params) {
     val mac = Params.mu(Params.muKey(s, params), beta, params)
     if (gamma.deep != mac.deep) {
       println("MAC Mismatch at: " + name)
-//      println("gamma: " + Params.byteArrayToStringOfHex(gamma))
-//      println("s: " + s)
-//      println("beta:  " + Params.byteArrayToStringOfHex(beta))
-//      println("mu(beta): " + Params.byteArrayToStringOfHex(Params.mu(Params.muKey(s, params), beta, params)))
+      println("beta.length: " + beta.length)
+      //      println("gamma: " + Params.byteArrayToStringOfHex(gamma))
+      //      println("s: " + s)
+      //      println("beta:  " + Params.byteArrayToStringOfHex(beta))
+      //      println("mu(beta): " + Params.byteArrayToStringOfHex(Params.mu(Params.muKey(s, params), beta, params)))
       //return
     }
 
@@ -89,20 +84,22 @@ class SphinxServer(p: Params) {
     val beta2 = Params.rho(Params.rhoKey(s, params), params)
 
     val b = Params.xor(beta1, beta2)
+
+//    println("beta1: " + Params.byteArrayToStringOfHex(beta1))
+//    println("beta2: " + Params.byteArrayToStringOfHex(beta2))
+//    println("b    : " + Params.byteArrayToStringOfHex(b))
+
     val (msgType, value, rest) = prefixDecode(b)
- 
+
     if (msgType == "node") {
       val nextHop = Params.pki.get(Params.byteArrayToStringOfHex(value)).get
-      println("Next hop is: " + nextHop.name)
+      //println("Next hop is: " + nextHop.name)
       val b2 = Params.hb(alpha, s, params)
       val alpha2 = params.group.expon(alpha, b2)
       val gamma2 = b.slice(Params.k, Params.k * 2)
-      //      val beta2 = b.slice(Params.k * 2, b.length)
-//      val beta2 = b.slice(Params.k * 2, (2 * p.r + 3) * Params.k)
+      // val beta2 = b.slice(Params.k * 2, (2 * p.r + 3) * Params.k -1)
       val beta2 = b.slice(Params.k * 2, b.length)
-      if (debug) println("Pik: " + Params.byteArrayToStringOfHex(Params.piKey(s, params)))
       val delta2 = Params.pii(Params.piKey(s, params), delta)
-      if (Client.debug) println(name + " winding delta: " + Params.byteArrayToStringOfHex(delta2))
       return nextHop.process((alpha2, beta2, gamma2), delta2)
     }
 
@@ -120,10 +117,8 @@ class SphinxServer(p: Params) {
     }
 
     if (msgType == "dest") {
-      val id = rest.slice(0 ,Params.k)
-      if (debug) println("Pik: " + Params.byteArrayToStringOfHex(Params.piKey(s, params)))
+      val id = rest.slice(0, Params.k)
       val delta2 = Params.pii(Params.piKey(s, params), delta)
-      if (Client.debug) println(name + " winding delta: " + Params.byteArrayToStringOfHex(delta2))
       println("Deliver reply message to " + Params.byteArrayToStringOfHex(value))
       if (Params.clients.contains(Params.byteArrayToStringOfHex(value))) {
         val client = Params.clients.get(Params.byteArrayToStringOfHex(value)).get

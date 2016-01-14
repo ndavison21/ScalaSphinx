@@ -21,7 +21,7 @@ class Group_P extends Group {
 	def genSecret: BigInt = {
 	  val random = new Array[Byte](256)
 	  Random.nextBytes(random)
-	  BigInt.apply(1, random) % q // TODO: verify is correct for prime-order cyclic group
+	  BigInt.apply(1, random) % q
 	}
 	
 	def expon(base: BigInt, power: BigInt): BigInt = base.modPow(power, p)

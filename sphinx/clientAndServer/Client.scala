@@ -8,14 +8,12 @@ import scala.collection.mutable.ListBuffer
 import scala.io.StdIn
 
 object Client {
-  val debug = false
 
   /**
    * Procedure to make a Sphinx mix mesage header,
    * used as a subroutine to make forward messages and single-use reply blocks
    */
   def createMixHeader(destination: Array[Byte], identifier: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): ((BigInt, Array[Byte], Array[Byte]), Array[BigInt]) = {
-    if (debug) println
     assert(destination.length <= (2 * (p.r - nodeIDs.length) + 2) * Params.k)
     assert(nodeIDs.length <= p.r)
     assert(identifier.length == Params.k)
@@ -23,7 +21,6 @@ object Client {
     val nu = nodeIDs.length
 
     val x = p.group.genSecret
-    if (debug) println("x: " + x)
 
     /**
      * Compute the nu (alpha, s, b) tuples
@@ -36,12 +33,6 @@ object Client {
       val node = Params.pki.get(Params.byteArrayToStringOfHex(nodeIDs(i))).get
       val secret = p.group.multiExpon(node.y, blinds)
       val blind = Params.hb(alpha, secret, p)
-
-      if (debug) println("node " + i + ":   " + Params.byteArrayToStringOfHex(nodeIDs(i)))
-      if (debug) println("alpha " + i + ":  " + alpha)
-      if (debug) println("secret " + i + ": " + secret)
-      if (debug) println("blind " + i + ":  " + blind)
-
       (alpha, secret, blind)
     }
 
@@ -60,13 +51,15 @@ object Client {
      */
     def compPhi(i: Int, prevPhi: Array[Byte]): Array[Byte] = {
       assert(prevPhi.length == 2 * i * Params.k)
-      if (i == nu) return prevPhi
+      if (i == nu-1) return prevPhi
       val phi1 = prevPhi ++ Array.fill[Byte](2 * Params.k)(0.asInstanceOf[Byte])
       val phi2 = Params.rho(Params.rhoKey(asbTuples(i)._2, p), p)
-      compPhi(i + 1, Params.xor(phi1, phi2.slice(phi2.length - (2 * (i + 1) * Params.k), phi2.length)))
+      val min = (2 * (p.r - (i+1)) + 3) * Params.k
+      val phi = Params.xor(phi1, phi2.slice(min, phi2.length))
+      compPhi(i + 1, phi)
     }
 
-    val phi = compPhi(0, new Array[Byte](0))
+    val phi = compPhi(0, new Array[Byte](0.asInstanceOf[Byte]))
 
     // Compute the M = (alpha, beta, gamma) message headers
     def compHeader(i: Integer, prevBeta: Array[Byte], prevGamma: Array[Byte]): (BigInt, Array[Byte], Array[Byte]) = {
@@ -76,12 +69,12 @@ object Client {
       val beta2 = Params.rho(Params.rhoKey(asbTuples(i)._2, p), p).slice(0, (2 * p.r + 1) * Params.k)
 
       val beta = Params.xor(beta1, beta2)
+//      println
+//      println("beta1: " + Params.byteArrayToStringOfHex(beta1))
+//      println("beta2: " + Params.byteArrayToStringOfHex(beta2))
+//      println("beta : " + Params.byteArrayToStringOfHex(beta))
 
       val gamma = Params.mu(Params.muKey(asbTuples(i)._2, p), beta, p)
-
-      if (debug) println("beta " + i + ": " + Params.byteArrayToStringOfHex(beta))
-      if (debug) println("s " + i + ": " + asbTuples(i)._2)
-      if (debug) println("gamma " + i + ": " + Params.byteArrayToStringOfHex(gamma))
 
       compHeader(i - 1, beta, gamma)
     }
@@ -90,8 +83,8 @@ object Client {
     val betaNu2 = Params.rho(Params.rhoKey(asbTuples(nu - 1)._2, p), p).slice(0, (2 * (p.r - nu) + 3) * Params.k)
 
     val betaNu = Params.xor(betaNu1, betaNu2) ++ phi
-
     val gammaNu = Params.mu(Params.muKey(asbTuples(nu - 1)._2, p), betaNu, p)
+    
     val m = compHeader(nu - 2, betaNu, gammaNu)
 
     var sSequence = new Array[BigInt](nu)
@@ -144,13 +137,9 @@ object Client {
     val ktilde = new Array[Byte](Params.k)
     Random.nextBytes(ktilde)
 
-    if (debug) println("ktilde: " + Params.byteArrayToStringOfHex(ktilde))
-
     val keyTuple = new Array[Array[Byte]](nu + 1)
     keyTuple(0) = ktilde
     for (i <- 1 to nu) keyTuple(i) = Params.piKey(secrets(i - 1), p)
-
-    if (debug) keyTuple.foreach { x => println("key: " + Params.byteArrayToStringOfHex(x)) }
 
     (id, keyTuple, (nodeIDs(0), header, ktilde))
   }
@@ -236,12 +225,10 @@ class Client(p: Params) {
 
     def appPi(i: Integer, prevDelta: Array[Byte]): Array[Byte] = {
       if (i < 1) return prevDelta
-      if (Client.debug) println(name + "unwinding delta: " + Params.byteArrayToStringOfHex(prevDelta))
       appPi(i - 1, Params.pi(keyTuple(i), prevDelta))
     }
 
     val deltaPrime = Params.pii(ktilde, appPi(nu, delta))
-    if (Client.debug) println(name + " unwinding delta: " + Params.byteArrayToStringOfHex(deltaPrime))
 
     val zeroKey = Array.fill[Byte](Params.k)(0)
     val msg = Params.unpadMsgBody(deltaPrime.slice(Params.k, deltaPrime.length))
