@@ -1,17 +1,18 @@
 package sphinx.params
 
 trait Group {
-  def g: BigInt
+  def g: Array[Byte]
   
-	def genSecret: BigInt
+	def genSecret: Array[Byte]
 	
-	def expon(base: BigInt, power: BigInt): BigInt
+	def expon(base: Array[Byte], power: Array[Byte]): Array[Byte]
 	
-	def multiExpon(base: BigInt, powers: List[BigInt]): BigInt
+	def multiExpon(base: Array[Byte], powers: List[Array[Byte]]): Array[Byte]
 	
-	def makeExp(data: Array[Byte]): BigInt
+	def makeExp(data: Array[Byte]): Array[Byte]
 	
-	def inGroup(alpha: BigInt): Boolean
+	def inGroup(alpha: Array[Byte]): Boolean
 	
-	def printable(alpha: BigInt): String = alpha.toString()
+	def printable(alpha: Array[Byte]): String = Params.byteArrayToStringOfBits(alpha)
+	
 }

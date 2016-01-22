@@ -29,7 +29,8 @@ object RunTests {
       //      println("Params.hash(\"Hello, World\"): " + Params.byteArrayToStringOfBits(Params.hash(Params.stringToByteArray("Hello, World"))))
       //      println("Params.hb(1, 1, p): " + Params.hb(1, 1, p))
       //  
-      val muk = Params.muKey(1, p)
+      val arr = Array.fill(31)(0.asInstanceOf[Byte]) ++ Array(1.asInstanceOf[Byte])
+      val muk = Params.muKey(arr, p)
       println("Params.muKey(1, p): " + Params.byteArrayToStringOfBits(muk))
       println("Params.mu(muk, testArr5, p): " + Params.byteArrayToStringOfBits(Params.mu(muk, testArr5, p)))
       println("Params.mu(muk, testArr5, p): " + Params.byteArrayToStringOfBits(Params.mu(muk, testArr5, p)))
@@ -65,7 +66,8 @@ object RunTests {
 
       val p = new Params
 
-      val pik = Params.piKey(1, p)
+      val arr = Array.fill(31)(0.asInstanceOf[Byte]) ++ Array(1.asInstanceOf[Byte])
+      val pik = Params.piKey(arr, p)
       println("Params.piKey(1, p): " + Params.byteArrayToStringOfBits(pik))
 
       //val testXor = Params.xor(Params.xor(testArr2k, pik), pik)
@@ -92,7 +94,6 @@ object RunTests {
 
     def testSystem(args: Array[String]) {
       val useEcc = (args.length > 0 && args(0) == "-ecc")
-      if (useEcc) println("ECC is not currently implemented, defaulting to basic group") // TODO Remove this once ECC is implemented
       val r = 5
       val p = new Params(r, useEcc)
 
@@ -127,13 +128,18 @@ object RunTests {
 
     }
 
-    println(Calendar.getInstance.getTime)
+    val start = System.nanoTime()
 
     // testParamsMethods
     // testPRP
-    testSystem(new Array[String](0))
+    
+    //testSystem(Array())
+    testSystem(Array("-ecc"))
 
-    println(Calendar.getInstance.getTime)
+    
+    val end = System.nanoTime()
+    
+    println(end - start)
 
   }
 }

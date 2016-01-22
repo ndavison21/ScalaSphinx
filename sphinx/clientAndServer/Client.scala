@@ -2,10 +2,8 @@ package sphinx.clientAndServer
 
 import scala.collection.mutable.HashMap
 import scala.util.Random
+
 import sphinx.params.Params
-import sphinx.params.Params
-import scala.collection.mutable.ListBuffer
-import scala.io.StdIn
 
 object Client {
 
@@ -13,7 +11,7 @@ object Client {
    * Procedure to make a Sphinx mix mesage header,
    * used as a subroutine to make forward messages and single-use reply blocks
    */
-  def createMixHeader(destination: Array[Byte], identifier: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): ((BigInt, Array[Byte], Array[Byte]), Array[BigInt]) = {
+  def createMixHeader(destination: Array[Byte], identifier: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): ((Array[Byte], Array[Byte], Array[Byte]), Array[Array[Byte]]) = {
     assert(destination.length <= (2 * (p.r - nodeIDs.length) + 2) * Params.k)
     assert(nodeIDs.length <= p.r)
     assert(identifier.length == Params.k)
@@ -28,7 +26,7 @@ object Client {
      * s(i): the Diffie-Hellman shared secrets
      * b(i): the blinding factors
      */
-    def computeASB(i: Integer, blinds: List[BigInt]): (BigInt, BigInt, BigInt) = {
+    def computeASB(i: Integer, blinds: List[Array[Byte]]): (Array[Byte], Array[Byte], Array[Byte]) = {
       val alpha = p.group.multiExpon(p.group.g, blinds)
       val node = Params.pki.get(Params.byteArrayToStringOfHex(nodeIDs(i))).get
       val secret = p.group.multiExpon(node.y, blinds)
@@ -37,7 +35,7 @@ object Client {
     }
 
     var blinds = x :: Nil
-    val asbTuples = new Array[(BigInt, BigInt, BigInt)](nu)
+    val asbTuples = new Array[(Array[Byte], Array[Byte], Array[Byte])](nu)
 
     for (i <- 0 until nu) { // TODO: do this in a properly functional way (recursively)
       val (a, s, b) = computeASB(i, blinds)
@@ -62,7 +60,7 @@ object Client {
     val phi = compPhi(0, new Array[Byte](0.asInstanceOf[Byte]))
 
     // Compute the M = (alpha, beta, gamma) message headers
-    def compHeader(i: Integer, prevBeta: Array[Byte], prevGamma: Array[Byte]): (BigInt, Array[Byte], Array[Byte]) = {
+    def compHeader(i: Integer, prevBeta: Array[Byte], prevGamma: Array[Byte]): (Array[Byte], Array[Byte], Array[Byte]) = {
       if (i < 0) return (asbTuples(0)._1, prevBeta, prevGamma)
 
       val beta1 = nodeIDs(i + 1) ++ prevGamma ++ prevBeta.slice(0, (2 * p.r - 1) * Params.k)
@@ -87,7 +85,7 @@ object Client {
     
     val m = compHeader(nu - 2, betaNu, gammaNu)
 
-    var sSequence = new Array[BigInt](nu)
+    var sSequence = new Array[Array[Byte]](nu)
     var i = 0
     asbTuples.foreach((t) => { sSequence(i) = t._2; i += 1 })
 
@@ -98,7 +96,7 @@ object Client {
    * Procedure to create a forward message to be sent through the Sphinx network
    * The forward message is the output of this procedure, and should be sent to node 0
    */
-  def creatForwardMessage(message: Array[Byte], destination: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): ((BigInt, Array[Byte], Array[Byte]), Array[Byte]) = {
+  def creatForwardMessage(message: Array[Byte], destination: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): ((Array[Byte], Array[Byte], Array[Byte]), Array[Byte]) = {
     assert(nodeIDs.length <= p.r)
     assert(Params.k + 1 + destination.length + message.length < Params.m)
 
@@ -124,7 +122,7 @@ object Client {
   /**
    * Create a single-use reply block
    */
-  def createSurb(destination: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): (Array[Byte], Array[Array[Byte]], (Array[Byte], (BigInt, Array[Byte], Array[Byte]), Array[Byte])) = {
+  def createSurb(destination: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): (Array[Byte], Array[Array[Byte]], (Array[Byte], (Array[Byte], Array[Byte], Array[Byte]), Array[Byte])) = {
     assert(nodeIDs.length <= p.r)
 
     val nu = nodeIDs.length
@@ -145,8 +143,8 @@ object Client {
   }
 
   def main(args: Array[String]) {
-    val useEcc = (args.length > 0 && args(0) == "-ecc")
-    if (useEcc) println("ECC is not currently implemented, defaulting to basic group") // TODO Remove this once ECC is implemented
+//    val useEcc = (args.length > 0 && args(0) == "-ecc")
+    val useEcc = false
     val r = 5
     val p = new Params(r, useEcc)
 

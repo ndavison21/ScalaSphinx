@@ -6,13 +6,13 @@ import sphinx.params.Params
 import scala.collection.mutable.ListBuffer
 
 class PseudonymServer{
-  val db = new HashMap[String, ListBuffer[(Array[Byte], (BigInt, Array[Byte], Array[Byte]), Array[Byte])]]
+  val db = new HashMap[String, ListBuffer[(Array[Byte], (Array[Byte], Array[Byte], Array[Byte]), Array[Byte])]]
 
-  def addSurb(pseudonym: Array[Byte], nymtuple: (Array[Byte], (BigInt, Array[Byte], Array[Byte]), Array[Byte])) {
+  def addSurb(pseudonym: Array[Byte], nymtuple: (Array[Byte], (Array[Byte], Array[Byte], Array[Byte]), Array[Byte])) {
     val nym = Params.byteArrayToStringOfHex(pseudonym)
     val list = {
       if (db.contains(nym)) { val l = db.get(nym).get; l.append(nymtuple); l } 
-      else { val l = new ListBuffer[(Array[Byte], (BigInt, Array[Byte], Array[Byte]), Array[Byte])](); l.append(nymtuple); l }
+      else { val l = new ListBuffer[(Array[Byte], (Array[Byte], Array[Byte], Array[Byte]), Array[Byte])](); l.append(nymtuple); l }
     }
     db.put(nym, list)
   }

@@ -1,15 +1,17 @@
 package sphinx.params
 
 import java.security.MessageDigest
+
 import scala.collection.mutable.HashMap
 import scala.util.Random
+
 import javax.crypto.Cipher
 import javax.crypto.Mac
+import javax.crypto.spec.IvParameterSpec
 import javax.crypto.spec.SecretKeySpec
 import sphinx.clientAndServer.Client
 import sphinx.clientAndServer.PseudonymServer
 import sphinx.clientAndServer.SphinxServer
-import javax.crypto.spec.IvParameterSpec
 
 object Params {
   val k = 16 // security parameter, in bytes (16 bytes = 128 bits)
@@ -143,8 +145,8 @@ object Params {
   /**
    * a hash to generate a key for rho()
    */
-  def rhoKey(s: BigInt, p: Params): Array[Byte] = {
-    val fullHash = hash(s.toByteArray)
+  def rhoKey(s: Array[Byte], p: Params): Array[Byte] = {
+    val fullHash = hash(s)
     fullHash.slice(0, Params.k)
   }
 
@@ -162,8 +164,8 @@ object Params {
   /**
    * a hash to generate a key for mu()
    */
-  def muKey(s: BigInt, p: Params): Array[Byte] = {
-    val fullHash = hash(s.toByteArray)
+  def muKey(s: Array[Byte], p: Params): Array[Byte] = {
+    val fullHash = hash(s)
     fullHash.slice(0, Params.k)
   }
 
@@ -213,16 +215,16 @@ object Params {
   /**
    * Hash for deciding if a node has seen a secret before
    */
-  def tauHash(s: BigInt, p: Params): Array[Byte] = {
-    val fullHash = hash(s.toByteArray)
+  def tauHash(s: Array[Byte], p: Params): Array[Byte] = {
+    val fullHash = hash(s)
     fullHash.slice(0, 2 * Params.k)
   }
 
   /**
    * generate a key for pi
    */
-  def piKey(s: BigInt, p: Params): Array[Byte] = {
-    val fullHash = hash(s.toByteArray)
+  def piKey(s: Array[Byte], p: Params): Array[Byte] = {
+    val fullHash = hash(s)
     fullHash.slice(0, Params.k)
   }
 
@@ -246,8 +248,12 @@ object Params {
   }
 
   // Hash of alpha and s to use as a blinding factor
-  def hb(alpha: BigInt, s: BigInt, p: Params): BigInt = p.group.makeExp(hash(alpha.toByteArray ++ s.toByteArray))
+  def hb(alpha: Array[Byte], s: Array[Byte], p: Params): Array[Byte] = p.group.makeExp(hash(alpha ++ s))
 
+  def padTo32Bytes(a: Array[Byte]): Array[Byte] = {
+    assert(a.length <= 32)
+    Array.fill(32 - a.length)(0.asInstanceOf[Byte]) ++ a
+  }
 }
 
 /**
@@ -259,7 +265,7 @@ class Params(maxhops: Int, useEcc: Boolean) {
 
   val r = maxhops
   val group: Group = {
-    if (useEcc) new Group_ECC() // Group_ECC is not implemented
+    if (useEcc) new Group_ECC()
     else new Group_P()
   }
 }

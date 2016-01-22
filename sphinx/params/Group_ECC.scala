@@ -1,41 +1,36 @@
 package sphinx.params
 
-import scala.util.Random
+import scala.BigInt
+
+import sphinx.curve25519.Keys.Private
+import sphinx.curve25519.Keys.Public
 
 class Group_ECC extends Group {
   // Group operations in ECC
-  // TODO: Implement ECC version to make it smaller and faster
-
-  // A 2048-bit prime
-	private val p = BigInt.apply("19134104382515471340121383082934308828788465164876922483018046665189568608385336521385528455852870226729419515782445769946311524543401780679763787388729547181989737060289407062479214017446428251157469940819568673215805731815521523529008837868909929585628774673216239536406270201585439559139691697966359990510412034461369768357756615060575177060679433618196595458284826534928911045879135540240765445688036648761768417624100416438042808407759355983611319236017991473072964105392335897160201662655194201702312372678481213560443558381777521284259428911914008097936688649209670009892790669991823472515537714171774700422727")
-
-	// A 256-bit prime.  q | p-1, and (p-1)/(2q) is also prime
-	private val q = BigInt.apply("106732665057690615308701680462846682779480968671143352109289849544853387479559")
+  
+  val g = Array.fill[Byte](32)(0.asInstanceOf[Byte])
 	
-	// A generator of the 256-bit subgroup of order q
-	val g = BigInt.apply("4841394417863494412227539373591815072221868474834407003108964621656948087607533132014406209384264001860614005413470474998618595063750798301826341774223008476018405743602814857378470614748174056572493655989586557587396511347276474665778845699406935799833636365083206218330593315513720711460353255243954204178057633122609221947354829869069875474221603457407347332029203573680170785191212685833773827500371044142146648183369300927714600114538209692069873794191715382617278768149594654315895296485533292574866819385073141870483659577707892565451842181763727355979252885729688362656338077037492411991956527093735651034592")
-	
-	def genSecret: BigInt = {
-	  val random = new Array[Byte](256)
-	  Random.nextBytes(random)
-	  BigInt.apply(1, random) % q // TODO: verify is correct for prime-order cyclic group
+	def genSecret: Array[Byte] = {
+	  val key = new Private
+	  key.priv
 	}
 	
-	def expon(base: BigInt, power: BigInt): BigInt = base.modPow(power, p)
-	
-	def multiExpon(base: BigInt, powers: List[BigInt]): BigInt = {
-	  def product(pwrs: List[BigInt], acc: BigInt): BigInt = {
-	    pwrs match {
-	      case Nil => acc
-	      case x :: tail => product(tail, (acc * x) % q)
-	    }
-	  }
-	  expon(base, product(powers, 1)) // TODO: verify is correct for prime-order cyclic group
+	def expon(base: Array[Byte], power: Array[Byte]): Array[Byte] = {
+	  val key = new Private(power)
+	  key.get_shared_key(new Public(base))
 	}
 	
-	def makeExp(data: Array[Byte]): BigInt = BigInt.apply(1, data) % q
+	def multiExpon(base: Array[Byte], powers: List[Array[Byte]]): Array[Byte] = {
+	  val baseandexps = base :: powers
+	  baseandexps.reduceLeft(expon)
+	}
 	
-	def inGroup(alpha: BigInt): Boolean = (alpha > 1) && alpha < (p - 1) && (expon(alpha, q) == 1)
+	def makeExp(data: Array[Byte]): Array[Byte] = {
+	  assert(data.length == 32)
+	  val key = new Private(data)
+	  key.priv
+	}
 	
-	override def printable(alpha: BigInt): String = { Params.byteArrayToStringOfHex(alpha.toByteArray) }
+	def inGroup(alpha: Array[Byte]): Boolean = (alpha.length == 32) // All strings of length 32 are in the group, says DJB
+
 }

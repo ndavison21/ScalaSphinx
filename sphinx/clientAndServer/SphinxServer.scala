@@ -2,12 +2,11 @@
 
 package sphinx.clientAndServer
 
-import scala.collection.mutable.HashMap
+import scala.collection.mutable.HashSet
 import scala.util.Random
-import sphinx.exceptions.AlphaNotInGroupException
+
 import sphinx.exceptions.NoSuchClientException
 import sphinx.params.Params
-import scala.collection.mutable.HashSet
 
 class SphinxServer(p: Params) {
 
@@ -22,7 +21,7 @@ class SphinxServer(p: Params) {
   val name = "node " + Params.byteArrayToStringOfHex(id)
 
   private val x = params.group.genSecret // private key
-  val y = params.group.expon(params.group.g, x) // public key TODO: check this is in the cyclic group
+  val y = params.group.expon(params.group.g, x) // public key 
 
   val seen = new HashSet[String]
   Params.pki.put(Params.byteArrayToStringOfHex(id), this)
@@ -46,7 +45,7 @@ class SphinxServer(p: Params) {
     }
   }
 
-  def process(header: (BigInt, Array[Byte], Array[Byte]), delta: Array[Byte]) {
+  def process(header: (Array[Byte], Array[Byte], Array[Byte]), delta: Array[Byte]) {
     println("Processing at server: " + name)
 
     val (alpha, beta, gamma) = header
