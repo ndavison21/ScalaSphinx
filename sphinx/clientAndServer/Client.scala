@@ -1,5 +1,7 @@
 package sphinx.clientAndServer
 
+import scala.annotation.elidable
+import scala.annotation.elidable.ASSERTION
 import scala.collection.mutable.HashMap
 import scala.util.Random
 
@@ -144,7 +146,7 @@ object Client {
 
   def main(args: Array[String]) {
 //    val useEcc = (args.length > 0 && args(0) == "-ecc")
-    val useEcc = false
+    val useEcc = true
     val r = 5
     val p = new Params(r, useEcc)
 

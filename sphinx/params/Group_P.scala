@@ -1,8 +1,8 @@
 package sphinx.params
 
+import scala.BigInt
+import scala.math.BigInt.int2bigInt
 import scala.util.Random
-import java.math.BigInteger
-import sphinx.exceptions.PowerTooLargeException
 
 /**
  * Group operations mod p

@@ -1,7 +1,7 @@
 package sphinx.params
 
 trait Group {
-  def g: Array[Byte]
+  val g: Array[Byte]
   
 	def genSecret: Array[Byte]
 	

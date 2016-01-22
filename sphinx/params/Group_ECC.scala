@@ -1,6 +1,7 @@
 package sphinx.params
 
-import scala.BigInt
+import scala.annotation.elidable
+import scala.annotation.elidable.ASSERTION
 
 import sphinx.curve25519.Keys.Private
 import sphinx.curve25519.Keys.Public
@@ -8,7 +9,7 @@ import sphinx.curve25519.Keys.Public
 class Group_ECC extends Group {
   // Group operations in ECC
   
-  val g = Array.fill[Byte](32)(0.asInstanceOf[Byte])
+  val g = Array.fill[Byte](31)(0.asInstanceOf[Byte]) :+ 9.asInstanceOf[Byte]
 	
 	def genSecret: Array[Byte] = {
 	  val key = new Private

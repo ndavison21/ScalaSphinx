@@ -2,6 +2,8 @@ package sphinx.params
 
 import java.security.MessageDigest
 
+import scala.annotation.elidable
+import scala.annotation.elidable.ASSERTION
 import scala.collection.mutable.HashMap
 import scala.util.Random
 

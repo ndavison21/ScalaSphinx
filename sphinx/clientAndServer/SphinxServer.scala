@@ -21,7 +21,7 @@ class SphinxServer(p: Params) {
   val name = "node " + Params.byteArrayToStringOfHex(id)
 
   private val x = params.group.genSecret // private key
-  val y = params.group.expon(params.group.g, x) // public key 
+  val y = params.group.expon(params.group.g, x) // public key
 
   val seen = new HashSet[String]
   Params.pki.put(Params.byteArrayToStringOfHex(id), this)
@@ -46,7 +46,7 @@ class SphinxServer(p: Params) {
   }
 
   def process(header: (Array[Byte], Array[Byte], Array[Byte]), delta: Array[Byte]) {
-    println("Processing at server: " + name)
+    // println("Processing at server: " + name)
 
     val (alpha, beta, gamma) = header
 
@@ -69,12 +69,6 @@ class SphinxServer(p: Params) {
     val mac = Params.mu(Params.muKey(s, params), beta, params)
     if (gamma.deep != mac.deep) {
       println("MAC Mismatch at: " + name)
-      println("beta.length: " + beta.length)
-      //      println("gamma: " + Params.byteArrayToStringOfHex(gamma))
-      //      println("s: " + s)
-      //      println("beta:  " + Params.byteArrayToStringOfHex(beta))
-      //      println("mu(beta): " + Params.byteArrayToStringOfHex(Params.mu(Params.muKey(s, params), beta, params)))
-      //return
     }
 
     seen += tag

@@ -29,7 +29,7 @@ class Private(sec: Array[Byte], seed: Array[Byte]) {
   }
   
   def get_shared_key(public:Public): Array[Byte] = {
-    val z = new Array[Byte](32)
+    var z = new Array[Byte](32)
     Curve25519.curve(z, priv, public.pub)
     return z
   }
