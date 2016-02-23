@@ -2,8 +2,6 @@ package sphinx.params
 
 import java.security.MessageDigest
 
-import scala.annotation.elidable
-import scala.annotation.elidable.ASSERTION
 import scala.collection.mutable.HashMap
 import scala.util.Random
 
@@ -173,6 +171,8 @@ object Params {
 
   /**
    * key is of length k, data is of length m
+   * 
+   * Anderson's LIONESS block cipher
    */
   def pi(key: Array[Byte], data: Array[Byte]): Array[Byte] = {
     assert(data.length >= 2 * k)

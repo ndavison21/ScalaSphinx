@@ -1,7 +1,5 @@
 package sphinx.clientAndServer
 
-import scala.annotation.elidable
-import scala.annotation.elidable.ASSERTION
 import scala.collection.mutable.HashMap
 import scala.util.Random
 
