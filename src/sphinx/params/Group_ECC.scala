@@ -1,8 +1,5 @@
 package sphinx.params
 
-import scala.annotation.elidable
-import scala.annotation.elidable.ASSERTION
-
 import sphinx.curve25519.Keys.Private
 import sphinx.curve25519.Keys.Public
 

@@ -8,7 +8,7 @@ import sphinx.params.Params
 object Client {
 
   /**
-   * Procedure to make a Sphinx mix mesage header,
+   * Procedure to make a Sphinx mix message header,
    * used as a subroutine to make forward messages and single-use reply blocks
    */
   def createMixHeader(destination: Array[Byte], identifier: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): ((Array[Byte], Array[Byte], Array[Byte]), Array[Array[Byte]]) = {
