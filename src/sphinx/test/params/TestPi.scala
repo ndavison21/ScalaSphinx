@@ -2,9 +2,10 @@ package sphinx.test.params
 
 import org.junit.Assert
 import org.junit.Test
+
+import sphinx.exceptions.DataLengthException
+import sphinx.exceptions.KeyLengthException
 import sphinx.params.Params
-import sphinx.exceptions.KeyTooShortException
-import sphinx.exceptions.DataTooShortException
 
 /**
  * Testing of the (family) of pseudo-random permutations, pi
@@ -14,26 +15,26 @@ class TestPi {
   
   /* Checking Encryption */
   
-  @Test(expected = classOf[KeyTooShortException])
+  @Test(expected = classOf[KeyLengthException])
   def testPiNullKey {
     val data = Array.fill[Byte](Params.k * 2)(0.asInstanceOf[Byte])
     val out = Params.pi(null, data)
   }
   
-  @Test(expected = classOf[KeyTooShortException])
+  @Test(expected = classOf[KeyLengthException])
   def testPiShortKey {
     val key = Array.fill[Byte](1)(0.asInstanceOf[Byte])
     val data = Array.fill[Byte](Params.k * 2)(0.asInstanceOf[Byte])
     val out = Params.pi(key, data)
   }
   
-  @Test(expected = classOf[DataTooShortException])
+  @Test(expected = classOf[DataLengthException])
   def testPiNullData {
     val key = Array.fill[Byte](Params.k)(0.asInstanceOf[Byte])
     val out = Params.pi(key, null)
   }
   
-  @Test(expected = classOf[DataTooShortException])
+  @Test(expected = classOf[DataLengthException])
   def testPiShortData {
     val key = Array.fill[Byte](Params.k)(0.asInstanceOf[Byte])
     val data = Array.fill[Byte](Params.k)(0.asInstanceOf[Byte]) // should be >=2*k
@@ -59,26 +60,26 @@ class TestPi {
   
   /* Checking decryption */
   
-  @Test(expected = classOf[KeyTooShortException])
+  @Test(expected = classOf[KeyLengthException])
   def testPiiNullKey {
     val data = Array.fill[Byte](Params.k * 2)(0.asInstanceOf[Byte])
     val out = Params.pii(null, data)
   }
   
-  @Test(expected = classOf[KeyTooShortException])
+  @Test(expected = classOf[KeyLengthException])
   def testPiiShortKey {
     val key = Array.fill[Byte](1)(0.asInstanceOf[Byte])
     val data = Array.fill[Byte](Params.k * 2)(0.asInstanceOf[Byte])
     val out = Params.pii(key, data)
   }
   
-  @Test(expected = classOf[DataTooShortException])
+  @Test(expected = classOf[DataLengthException])
   def testPiiNullData {
     val key = Array.fill[Byte](Params.k)(0.asInstanceOf[Byte])
     val out = Params.pii(key, null)
   }
   
-  @Test(expected = classOf[DataTooShortException])
+  @Test(expected = classOf[DataLengthException])
   def testPiiShortData {
     val key = Array.fill[Byte](Params.k)(0.asInstanceOf[Byte])
     val data = Array.fill[Byte](Params.k)(0.asInstanceOf[Byte]) // should be >=2*k

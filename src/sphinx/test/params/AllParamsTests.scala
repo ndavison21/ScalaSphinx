@@ -9,6 +9,8 @@ import org.junit.runners.Suite
     classOf[TestPi],
     classOf[TestRandomSubset],
     classOf[TestStringByteConversion],
-    classOf[TestMessageBodyPadding]
+    classOf[TestMessageBodyPadding],
+    classOf[TestRho],
+    classOf[TestMu]
     ))
 class AllParamsTests

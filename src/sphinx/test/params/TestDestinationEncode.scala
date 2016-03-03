@@ -2,7 +2,7 @@ package sphinx.test.params
 
 import sphinx.params.Params
 import org.junit.Test
-import sphinx.exceptions.KeyTooShortException
+import sphinx.exceptions.KeyLengthException
 import sphinx.exceptions.DestinationLengthException
 import org.junit.Assert
 

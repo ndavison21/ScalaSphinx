@@ -10,12 +10,15 @@ import javax.crypto.spec.SecretKeySpec
 import sphinx.clientAndServer.Client
 import sphinx.clientAndServer.PseudonymServer
 import sphinx.clientAndServer.SphinxServer
-import sphinx.exceptions.DataTooShortException
-import sphinx.exceptions.KeyTooShortException
+import sphinx.exceptions.DataLengthException
+import sphinx.exceptions.KeyLengthException
 import sphinx.exceptions.DestinationLengthException
 import sphinx.exceptions.DestinationLengthException
 import sphinx.exceptions.InvalidSetException
 import sphinx.exceptions.MessageTooLargeException
+import sphinx.exceptions.KeyLengthException
+import sphinx.exceptions.DataLengthException
+import sphinx.exceptions.DataLengthException
 
 object Params {
   val k = 16 // security parameter, in bytes (16 bytes = 128 bits)
@@ -137,7 +140,7 @@ object Params {
    * output is of length (2*r+3)*k
    */
   def rho(k: Array[Byte], p: Params): Array[Byte] = {
-    assert(k.length == Params.k)
+    if (k == null || k.length != Params.k) throw new KeyLengthException("Key must be " + Params.k + " bytes long")
     
     val ivSpec = new IvParameterSpec(Array.fill[Byte](Params.k)(0.asInstanceOf[Byte]))
     val cipher = Cipher.getInstance("AES/CBC/NoPadding") // 128 bit key
@@ -161,7 +164,8 @@ object Params {
    * The MAC, key and output both of length k
    */
   def mu(k: Array[Byte], data: Array[Byte], p: Params): Array[Byte] = {
-    assert(k.length == Params.k)
+    if (k == null || k.length != Params.k) throw new KeyLengthException("Key must be " + Params.k + " bytes long")
+    if (data == null) throw new DataLengthException("Data is null")
     val mac = Mac.getInstance("HmacSHA256")
     val key = new SecretKeySpec(k, "HmacSHA256")
     mac.init(key)
@@ -182,8 +186,8 @@ object Params {
    * Anderson's LIONESS block cipher
    */
   def pi(key: Array[Byte], data: Array[Byte]): Array[Byte] = {
-    if (key == null || key.length != k) throw new KeyTooShortException("Length of key must be " + k)
-    if (data == null || data.length < 2*k) throw new DataTooShortException("Length of data must be at least " + k*2)
+    if (key == null || key.length != k) throw new KeyLengthException("Length of key must be " + k)
+    if (data == null || data.length < 2*k) throw new DataLengthException("Length of data must be at least " + k*2)
 
     var l = data.slice(0, k)
     var r = data.slice(k, data.length)
@@ -203,8 +207,8 @@ object Params {
    * the inverse of pi
    */
   def pii(key: Array[Byte], data: Array[Byte]): Array[Byte] = {
-    if (key == null || key.length != k) throw new KeyTooShortException("Length of key must be " + k)
-    if (data == null || data.length < 2*k) throw new DataTooShortException("Length of data must be at least " + k*2)
+    if (key == null || key.length != k) throw new KeyLengthException("Length of key must be " + k + " bytes")
+    if (data == null || data.length < 2*k) throw new DataLengthException("Length of data must be at least " + k*2 + " bytes")
 
     var l = data.slice(0, k)
     var r = data.slice(k, data.length)
@@ -246,7 +250,9 @@ object Params {
   }
 
   def keyedHash(k: Array[Byte], data: Array[Byte]): Array[Byte] = {
-    assert(k.length == Params.k)
+    if (k == null || k.length != Params.k) throw new KeyLengthException("Length of key must be " + k + " bytes")
+    if (data == null) throw new DataLengthException("Data is null")
+
 
     val ivSpec = new IvParameterSpec(Array.fill(Params.k)(0.asInstanceOf[Byte]))
     
@@ -260,7 +266,7 @@ object Params {
   def hb(alpha: Array[Byte], s: Array[Byte], p: Params): Array[Byte] = p.group.makeExp(hash(alpha ++ s))
 
   def padTo32Bytes(a: Array[Byte]): Array[Byte] = {
-    assert(a.length <= 32)
+    if (a.length > 32) throw new DataLengthException("Data is longer than 32 bytes")
     Array.fill(32 - a.length)(0.asInstanceOf[Byte]) ++ a
   }
 }
