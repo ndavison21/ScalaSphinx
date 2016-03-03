@@ -12,6 +12,10 @@ import sphinx.clientAndServer.PseudonymServer
 import sphinx.clientAndServer.SphinxServer
 import sphinx.exceptions.DataTooShortException
 import sphinx.exceptions.KeyTooShortException
+import sphinx.exceptions.DestinationLengthException
+import sphinx.exceptions.DestinationLengthException
+import sphinx.exceptions.InvalidSetException
+import sphinx.exceptions.MessageTooLargeException
 
 object Params {
   val k = 16 // security parameter, in bytes (16 bytes = 128 bits)
@@ -23,16 +27,15 @@ object Params {
   /**
    * special destination
    */
-  val dSpecial = new Array[Byte](1)
-  dSpecial(0) = 0
+  val dSpecial = Array.fill[Byte](1)(0.asInstanceOf[Byte])
 
   /**
    * any other destination
    * prefixes the destination with its length
    */
   def destinationEncode(dest: Array[Byte]): Array[Byte] = {
-    assert(dest.length >=1)
-    assert(dest.length <=127)
+    if (dest == null || dest.length < 1) throw new DestinationLengthException("Destination must be at least 1 character long")
+    if (dest.length >127) throw new DestinationLengthException("Destination must be at most 127 bytes long")
     dest.length.asInstanceOf[Byte] +: dest
   }
   
@@ -40,6 +43,7 @@ object Params {
    * Returns a list of nu random elements of the input (with replacement)
    */
   def randomSubset[T](list: List[T], nu: Int): List[T] = {
+    if (list == null || list.length == 0) throw new InvalidSetException("Set must have at least 1 element")
 
     def collect(vect: Vector[T], sampleSize: Int, acc: List[T]): List[T] = {
       if (sampleSize == 0) acc
@@ -53,6 +57,8 @@ object Params {
   }
 
   def randomSubset[T: ClassManifest](arr: Array[T], nu: Int): Array[T] = {
+    if (arr == null || arr.length == 0) throw new InvalidSetException("Set must have at least 1 element")
+    
     val out = new Array[T](nu)
     for (i <- 0 until nu) out(i) = arr(Random.nextInt(nu))
     out
@@ -72,6 +78,8 @@ object Params {
    * msgBody: the current body, padding is added as a 0 followed by as many 1's as the message needs to be padded to
    */
   def padMsgBody(msgSize: Int, msgBody: Array[Byte]): Array[Byte] = {
+    if (msgSize < msgBody.length) throw new MessageTooLargeException("Message is larger than the specified size")
+    
     val paddedMsgBody: Array[Byte] = Array.fill[Byte](msgSize)((-1).asInstanceOf[Byte])
 
     for (i <- 0 until msgBody.length)
@@ -85,7 +93,6 @@ object Params {
   /**
    * inverse of padMsgBody, used for removing trailing padding
    *
-   * TODO: currently throws ArrayIndexOutOfBounds if the string has not been padded, instead should fail nicely
    */
   def unpadMsgBody(msgBody: Array[Byte]): Array[Byte] = {
 
@@ -178,8 +185,6 @@ object Params {
     if (key == null || key.length != k) throw new KeyTooShortException("Length of key must be " + k)
     if (data == null || data.length < 2*k) throw new DataTooShortException("Length of data must be at least " + k*2)
 
-
-
     var l = data.slice(0, k)
     var r = data.slice(k, data.length)
     val k1, k3 = key
@@ -198,8 +203,8 @@ object Params {
    * the inverse of pi
    */
   def pii(key: Array[Byte], data: Array[Byte]): Array[Byte] = {
-    assert(data.length >= 2 * k)
-    assert(key.length == k)
+    if (key == null || key.length != k) throw new KeyTooShortException("Length of key must be " + k)
+    if (data == null || data.length < 2*k) throw new DataTooShortException("Length of data must be at least " + k*2)
 
     var l = data.slice(0, k)
     var r = data.slice(k, data.length)
