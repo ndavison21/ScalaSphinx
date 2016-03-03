@@ -143,9 +143,9 @@ object Client {
   }
 
   def main(args: Array[String]) {
-//    val useEcc = (args.length > 0 && args(0) == "-ecc")
-    val useEcc = true
-    val r = 5
+    println("Order of flags [-ecc] [path length] [forward message] [email] [reply message] [pseudonym]")
+    val useEcc = (args.length > 0 && args(0) == "-ecc")
+    val r = (if (args.length > 1) args(1).toInt else 5)
     val p = new Params(r, useEcc)
 
     // Create some sphinx servers (they add themselves to the pki)
@@ -158,7 +158,12 @@ object Client {
 
     val useNodes = Params.randomSubset(Params.pki.keySet.toArray, r)
     println("Creating forward message")
-    val (header, delta) = Client.creatForwardMessage(Params.stringToByteArray("This is a test"), Params.stringToByteArray("natemail@mail.com"), useNodes.map { x => Params.stringOfHexToByteArray(x) }, p)
+    
+    val message = (if (args.length > 2) args(2) else "This is a test")
+    val email = (if (args.length > 3) args(3) else "nd359@cam.ac.uk")
+      
+    val (header, delta) = Client.creatForwardMessage(Params.stringToByteArray(message),
+        Params.stringToByteArray(email), useNodes.map { x => Params.stringOfHexToByteArray(x) }, p)
     println("Finished Creating forward message")
 
     // Send it to the first node for processing
@@ -168,13 +173,16 @@ object Client {
     println("Finished Processing Message")
     println
     // Create a reply block for the client
+    val pseudonym = (if (args.length > 4) args(4) else "nd359")
     println("Creating a reply block")
-    client.createPseudonymReply(Params.stringToByteArray("nd359"), r)
+    client.createPseudonymReply(Params.stringToByteArray(pseudonym), r)
     println("Finished creating a reply block")
     println
     // Send a message to it
     println("Using the reply block")
-    Params.pseudonymServer.sendToPseudonym(Params.stringToByteArray("nd359"), Params.stringToByteArray("This is a reply test"))
+    
+    val replyMessage = (if (args.length > 4) args(4) else "This is a reply test")
+    Params.pseudonymServer.sendToPseudonym(Params.stringToByteArray(pseudonym), Params.stringToByteArray(replyMessage))
     println("Finished using the reply block")
   }
 }

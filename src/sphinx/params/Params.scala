@@ -1,10 +1,8 @@
 package sphinx.params
 
 import java.security.MessageDigest
-
 import scala.collection.mutable.HashMap
 import scala.util.Random
-
 import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.spec.IvParameterSpec
@@ -12,6 +10,8 @@ import javax.crypto.spec.SecretKeySpec
 import sphinx.clientAndServer.Client
 import sphinx.clientAndServer.PseudonymServer
 import sphinx.clientAndServer.SphinxServer
+import sphinx.exceptions.DataTooShortException
+import sphinx.exceptions.KeyTooShortException
 
 object Params {
   val k = 16 // security parameter, in bytes (16 bytes = 128 bits)
@@ -175,8 +175,10 @@ object Params {
    * Anderson's LIONESS block cipher
    */
   def pi(key: Array[Byte], data: Array[Byte]): Array[Byte] = {
-    assert(data.length >= 2 * k)
-    assert(key.length == k)
+    if (key == null || key.length != k) throw new KeyTooShortException("Length of key must be " + k)
+    if (data == null || data.length < 2*k) throw new DataTooShortException("Length of data must be at least " + k*2)
+
+
 
     var l = data.slice(0, k)
     var r = data.slice(k, data.length)
