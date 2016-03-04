@@ -2,8 +2,10 @@ package sphinx.clientAndServer
 
 import scala.collection.mutable.HashMap
 import scala.util.Random
-
 import sphinx.params.Params
+import sphinx.exceptions.DestinationLengthException
+import sphinx.exceptions.DataLengthException
+import sphinx.exceptions.PathLengthException
 
 object Client {
 
@@ -12,8 +14,8 @@ object Client {
    * used as a subroutine to make forward messages and single-use reply blocks
    */
   def createMixHeader(destination: Array[Byte], identifier: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): ((Array[Byte], Array[Byte], Array[Byte]), Array[Array[Byte]]) = {
-    assert(destination.length <= (2 * (p.r - nodeIDs.length) + 2) * Params.k)
-    assert(nodeIDs.length <= p.r)
+    if (destination == null || destination.length > (2 * (p.r - nodeIDs.length) + 2) * Params.k) throw new DestinationLengthException("Invalid Destination")
+    if (nodeIDs == null || nodeIDs.length > p.r) throw new PathLengthException("Number of nodes length must be <= " + p.r)
     assert(identifier.length == Params.k)
 
     val nu = nodeIDs.length
@@ -49,10 +51,10 @@ object Client {
      */
     def compPhi(i: Int, prevPhi: Array[Byte]): Array[Byte] = {
       assert(prevPhi.length == 2 * i * Params.k)
-      if (i == nu-1) return prevPhi
+      if (i == nu - 1) return prevPhi
       val phi1 = prevPhi ++ Array.fill[Byte](2 * Params.k)(0.asInstanceOf[Byte])
       val phi2 = Params.rho(Params.rhoKey(asbTuples(i)._2, p), p)
-      val min = (2 * (p.r - (i+1)) + 3) * Params.k
+      val min = (2 * (p.r - (i + 1)) + 3) * Params.k
       val phi = Params.xor(phi1, phi2.slice(min, phi2.length))
       compPhi(i + 1, phi)
     }
@@ -67,10 +69,10 @@ object Client {
       val beta2 = Params.rho(Params.rhoKey(asbTuples(i)._2, p), p).slice(0, (2 * p.r + 1) * Params.k)
 
       val beta = Params.xor(beta1, beta2)
-//      println
-//      println("beta1: " + Params.byteArrayToStringOfHex(beta1))
-//      println("beta2: " + Params.byteArrayToStringOfHex(beta2))
-//      println("beta : " + Params.byteArrayToStringOfHex(beta))
+      //      println
+      //      println("beta1: " + Params.byteArrayToStringOfHex(beta1))
+      //      println("beta2: " + Params.byteArrayToStringOfHex(beta2))
+      //      println("beta : " + Params.byteArrayToStringOfHex(beta))
 
       val gamma = Params.mu(Params.muKey(asbTuples(i)._2, p), beta, p)
 
@@ -82,7 +84,7 @@ object Client {
 
     val betaNu = Params.xor(betaNu1, betaNu2) ++ phi
     val gammaNu = Params.mu(Params.muKey(asbTuples(nu - 1)._2, p), betaNu, p)
-    
+
     val m = compHeader(nu - 2, betaNu, gammaNu)
 
     var sSequence = new Array[Array[Byte]](nu)
@@ -97,8 +99,8 @@ object Client {
    * The forward message is the output of this procedure, and should be sent to node 0
    */
   def creatForwardMessage(message: Array[Byte], destination: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): ((Array[Byte], Array[Byte], Array[Byte]), Array[Byte]) = {
-    assert(nodeIDs.length <= p.r)
-    assert(Params.k + 1 + destination.length + message.length < Params.m)
+    if (nodeIDs == null || nodeIDs.length > p.r) throw new PathLengthException("Number of nodes length must be <= " + p.r)
+    if (Params.k + 1 + destination.length + message.length >= Params.m) throw new DataLengthException("Data too long, combined message, destination and key must by less than " + Params.m + " bytes")
 
     val nu = nodeIDs.length
 
@@ -123,7 +125,7 @@ object Client {
    * Create a single-use reply block
    */
   def createSurb(destination: Array[Byte], nodeIDs: Array[Array[Byte]], p: Params): (Array[Byte], Array[Array[Byte]], (Array[Byte], (Array[Byte], Array[Byte], Array[Byte]), Array[Byte])) = {
-    assert(nodeIDs.length <= p.r)
+    if (nodeIDs == null || nodeIDs.length > p.r) throw new PathLengthException("Number of nodes length must be <= " + p.r)
 
     val nu = nodeIDs.length
     val id = new Array[Byte](Params.k)
@@ -158,12 +160,12 @@ object Client {
 
     val useNodes = Params.randomSubset(Params.pki.keySet.toArray, r)
     println("Creating forward message")
-    
+
     val message = (if (args.length > 2) args(2) else "This is a test")
     val email = (if (args.length > 3) args(3) else "nd359@cam.ac.uk")
-      
+
     val (header, delta) = Client.creatForwardMessage(Params.stringToByteArray(message),
-        Params.stringToByteArray(email), useNodes.map { x => Params.stringOfHexToByteArray(x) }, p)
+      Params.stringToByteArray(email), useNodes.map { x => Params.stringOfHexToByteArray(x) }, p)
     println("Finished Creating forward message")
 
     // Send it to the first node for processing
@@ -180,7 +182,7 @@ object Client {
     println
     // Send a message to it
     println("Using the reply block")
-    
+
     val replyMessage = (if (args.length > 4) args(4) else "This is a reply test")
     Params.pseudonymServer.sendToPseudonym(Params.stringToByteArray(pseudonym), Params.stringToByteArray(replyMessage))
     println("Finished using the reply block")
