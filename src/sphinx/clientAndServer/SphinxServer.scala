@@ -85,6 +85,7 @@ class SphinxServer(p: Params) {
     val (msgType, value, rest) = prefixDecode(b)
 
     if (msgType == "node") {
+      println("msgType == node")
       val nextHop = Params.pki.get(Params.byteArrayToStringOfHex(value)).get
       //println("Next hop is: " + nextHop.name)
       val b2 = Params.hb(alpha, s, params)
@@ -97,6 +98,7 @@ class SphinxServer(p: Params) {
     }
 
     if (msgType == "dSpec") {
+      println("msgType == dspec")
       val delta2 = Params.pii(Params.piKey(s, params), delta)
       if (delta2.slice(0, Params.k).deep == Array.fill[Byte](Params.k)(0).deep) {
         val (msgType2, destination, message) = prefixDecode(delta2.slice(Params.k, delta2.length))
@@ -110,6 +112,7 @@ class SphinxServer(p: Params) {
     }
 
     if (msgType == "dest") {
+      println("msgType == dest")
       val id = rest.slice(0, Params.k)
       val delta2 = Params.pii(Params.piKey(s, params), delta)
       println("Deliver reply message to " + Params.byteArrayToStringOfHex(value))

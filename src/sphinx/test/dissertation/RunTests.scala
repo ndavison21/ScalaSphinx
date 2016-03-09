@@ -1,12 +1,8 @@
-package sphinx.clientAndServer
+package sphinx.test.dissertation
 
-import scala.math.BigInt.int2bigInt
-import scala.util.Random
 import sphinx.params.Params
-import java.io.PrintStream
-import java.io.FileOutputStream
-import java.io.BufferedOutputStream
-import java.util.Calendar
+import sphinx.clientAndServer.Client
+import sphinx.clientAndServer.SphinxServer
 
 object RunTests {
   def main(args: Array[String]) {
@@ -26,11 +22,11 @@ object RunTests {
 
       // Create some sphinx servers (they add themselves to the pki)
       for (i <- 0 to r * 2) {
-        new SphinxServer(new Params(r, useEcc))
+        new SphinxServer(p)
       }
 
       // Create a client
-      val client = new Client(new Params(r, useEcc))
+      val client = new Client(p)
 
       // Creating a forward message
       val useNodes = Params.randomSubset(Params.pki.keySet.toArray, r)
