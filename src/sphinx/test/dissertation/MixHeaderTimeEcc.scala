@@ -9,17 +9,17 @@ object MixHeaderTimeEcc {
     Framework.writeToFile("output/mixHeaderTimeEcc.csv", "r,avg. time, variance\n")
     for (r <- 1 to 10) {
       
-      var mean = 0L
-      var variance = 0L
+      var mean = 0D
+      var variance = 0D
       
-      for(i <- 1 to 1000) {
+      for(i <- 1 to 10000) {
         val time = runTest(r)
         val prev_mean = mean
-        mean = mean + (time - mean)/i
-        variance = variance + (time - prev_mean)*(time - mean)
+        mean = prev_mean + (time - prev_mean)/i
+        variance = ((i-1)*variance + (time - prev_mean)*(time - mean))/i
       }
       
-      val samplevar:Float = variance/999
+      val samplevar = variance
 
       println("r = " + r + " avg. time = " + mean + " variance = " + samplevar)
       Framework.appendToFile("output/mixHeaderTimeEcc.csv", r + "," + mean + "," + samplevar)

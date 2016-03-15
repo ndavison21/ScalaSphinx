@@ -9,46 +9,12 @@ import sphinx.exceptions.NoSuchClientException
 import sphinx.params.Params
 
 /**
- * Note: any protected methods should be private, but were made protected for use in the testing version
+ * A modified version of the Sphinx server which does not forward to the
+ * next stage, in order to test the processing overhead at a single node
  */
-class SphinxServer(p: Params) {
+class SphinxServerModified(p: Params) extends SphinxServer(p) {
 
-  val params = p
-
-  // Generating identifier
-  val genId = new Array[Byte](5)
-  Random.nextBytes(genId)
-  val id = nodeNameEncode(genId)
-  assert(id.length == Params.k)
-  assert(id(0) == -1)
-  val name = "node " + Params.byteArrayToStringOfHex(id)
-
-  protected val x = params.group.genSecret // private key (should be private, but made protected for testing)
-  val y = params.group.expon(params.group.g, x) // public key
-
-  val seen = new HashSet[String]
-  Params.pki.put(Params.byteArrayToStringOfHex(id), this)
-
-  /**
-   * used to enforce the prefix property, node identifiers start with a -1
-   */
-  protected def nodeNameEncode(id: Array[Byte]): Array[Byte] = Array[Byte]((-1).asInstanceOf[Byte]) ++ id ++ Array.fill(Params.k - (id.length + 1))(0.asInstanceOf[Byte])
-
-  /**
-   * Decodes the prefix-free encoding
-   * Returns the type, value and the remainder of the input string
-   */
-  protected def prefixDecode(s: Array[Byte]): (String, Array[Byte], Array[Byte]) = {
-    if (s.length == 0) (null, null, null)
-    else if (s(0) == 0) ("dSpec", null, s.slice(1, s.length))
-    else if (s(0) == -1) ("node", s.slice(0, Params.k), s.slice(Params.k, s.length))
-    else {
-      val l = s(0)
-      ("dest", s.slice(1, l + 1), s.slice(l + 1, s.length))
-    }
-  }
-
-  def process(header: (Array[Byte], Array[Byte], Array[Byte]), delta: Array[Byte]) {
+  override def process(header: (Array[Byte], Array[Byte], Array[Byte]), delta: Array[Byte]) {
     // println("Processing at server: " + name)
 
     val (alpha, beta, gamma) = header
@@ -72,6 +38,7 @@ class SphinxServer(p: Params) {
     val mac = Params.mu(Params.muKey(s, params), beta, params)
     if (gamma.deep != mac.deep) {
       println("MAC Mismatch at: " + name)
+      return
     }
 
     seen += tag
@@ -97,7 +64,8 @@ class SphinxServer(p: Params) {
       // val beta2 = b.slice(Params.k * 2, (2 * p.r + 3) * Params.k -1)
       val beta2 = b.slice(Params.k * 2, b.length)
       val delta2 = Params.pii(Params.piKey(s, params), delta)
-      return nextHop.process((alpha2, beta2, gamma2), delta2)
+      // return nextHop.process((alpha2, beta2, gamma2), delta2)
+      return
     }
 
     if (msgType == "dSpec") {
@@ -121,19 +89,12 @@ class SphinxServer(p: Params) {
       println("Deliver reply message to " + Params.byteArrayToStringOfHex(value))
       if (Params.clients.contains(Params.byteArrayToStringOfHex(value))) {
         val client = Params.clients.get(Params.byteArrayToStringOfHex(value)).get
-        return client.process(id, delta2)
+        // return client.process(id, delta2)
+        return
       } else {
         throw new NoSuchClientException(Params.byteArrayToStringOfHex(value))
       }
 
     }
-  }
-
-  def main(args: Array[String]) {
-    val p = new Params
-    val server = new SphinxServer(p)
-
-    println("Name: " + server.name)
-    println("y: " + p.group.printable(server.y))
   }
 }

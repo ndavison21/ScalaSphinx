@@ -9,6 +9,10 @@ object Framework {
     Params.pki.clear()
     Params.clients.clear()
     Params.pseudonymServer.db.clear()
+    assert(Params.pki.size == 0)
+    assert(Params.clients.size == 0)
+    assert(Params.pseudonymServer.db.size == 0)
+    
     System.gc()
   }
 
