@@ -1,10 +1,6 @@
+package sphinx.test.dissertation
 
-
-package sphinx.clientAndServer
-
-import scala.collection.mutable.HashSet
-import scala.util.Random
-
+import sphinx.clientAndServer.SphinxServer
 import sphinx.exceptions.NoSuchClientException
 import sphinx.params.Params
 

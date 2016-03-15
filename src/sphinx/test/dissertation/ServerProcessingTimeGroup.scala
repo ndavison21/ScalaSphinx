@@ -2,7 +2,6 @@ package sphinx.test.dissertation
 
 import sphinx.clientAndServer.Client
 import sphinx.params.Params
-import sphinx.clientAndServer.SphinxServer
 
 object ServerProcessingTimeGroup {
 
@@ -17,10 +16,10 @@ object ServerProcessingTimeGroup {
         val time = runTest(r)
         val prev_mean = mean
         mean = mean + (time - mean) / i
-        variance = variance + (time - prev_mean) * (time - mean)
+        variance = ((i-1)*variance + (time - prev_mean)*(time - mean))/i
       }
 
-      val samplevar: Float = variance / 999
+      val samplevar = variance
 
       println("r = " + r + " avg. time = " + mean + " variance = " + samplevar)
       Framework.appendToFile("output/serverProcessingTimeGroup.csv", r + "," + mean + "," + samplevar)
@@ -32,7 +31,7 @@ object ServerProcessingTimeGroup {
     val p = new Params(r, false)
 
     for (i <- 0 to r * 2) {
-      new SphinxServer(p)
+      new SphinxServerModified(p)
     }
     val client = new Client(p)
     

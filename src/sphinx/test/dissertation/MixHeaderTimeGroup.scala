@@ -15,11 +15,11 @@ object MixHeaderTimeGroup {
       for (i <- 1 to 1000) {
         val time = runTest(r)
         val prev_mean = mean
-        mean = mean + (time - mean) / i
-        variance = variance + (time - prev_mean) * (time - mean)
+        mean = mean + (time - mean) / i // online mean
+        variance = ((i-1)*variance + (time - prev_mean)*(time - mean))/i // online variance
       }
 
-      val samplevar: Float = variance / 999
+      val samplevar: Float = variance
 
       println("r = " + r + " avg. time = " + mean + " variance = " + samplevar)
       Framework.appendToFile("output/mixHeaderTimeGroup.csv", r + "," + mean + "," + samplevar)

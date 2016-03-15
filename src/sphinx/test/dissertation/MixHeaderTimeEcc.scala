@@ -12,6 +12,8 @@ object MixHeaderTimeEcc {
       var mean = 0D
       var variance = 0D
       
+      runTest(r) // running once to initialise objects, so we can assume the same conditions for each iteration
+      
       for(i <- 1 to 10000) {
         val time = runTest(r)
         val prev_mean = mean

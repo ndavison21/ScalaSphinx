@@ -1,5 +1,3 @@
-
-
 package sphinx.clientAndServer
 
 import scala.collection.mutable.HashSet

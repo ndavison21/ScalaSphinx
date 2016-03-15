@@ -2,8 +2,6 @@ package sphinx.test.dissertation
 
 import sphinx.clientAndServer.Client
 import sphinx.params.Params
-import sphinx.clientAndServer.SphinxServer
-import sphinx.test.dissertation.SphinxServerModified
 
 object ServerProcessingTimeEcc {
 
@@ -14,14 +12,14 @@ object ServerProcessingTimeEcc {
       var mean = 0D
       var variance = 0D
 
-      for (i <- 1 to 1000) {
+      for (i <- 1 to 10000) {
         val time = runTest(r)
         val prev_mean = mean
         mean = mean + (time - mean) / i
-        variance = variance + (time - prev_mean) * (time - mean)
+        variance = ((i-1)*variance + (time - prev_mean)*(time - mean))/i
       }
 
-      val samplevar = variance / 999
+      val samplevar = variance
 
       println("r = " + r + " avg. time = " + mean + " variance = " + samplevar)
       Framework.appendToFile("output/serverProcessingTimeEcc.csv", r + "," + mean + "," + samplevar)
