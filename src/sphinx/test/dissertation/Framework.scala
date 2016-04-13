@@ -5,6 +5,11 @@ import sphinx.params.Params
 import java.io.FileWriter
 
 object Framework {
+  def partialCleanup {
+    Params.pseudonymServer.db.clear()
+    System.gc
+  }
+  
   def cleanup {
     Params.pki.clear()
     Params.clients.clear()
