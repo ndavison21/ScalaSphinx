@@ -4,6 +4,7 @@ import sphinx.params.Params
 import scala.collection.mutable.HashMap
 import sphinx.params.Params
 import scala.collection.mutable.ListBuffer
+import sphinx.exceptions.NoReplyBlocksException
 
 class PseudonymServer{
   val db = new HashMap[String, ListBuffer[(Array[Byte], (Array[Byte], Array[Byte], Array[Byte]), Array[Byte])]]
@@ -30,8 +31,8 @@ class PseudonymServer{
         Params.pki.get(Params.byteArrayToStringOfHex(n0)).get.process(header0, body)
         
         if (l.length > 0) db.put(nym, l)
-      } else println("No reply blocks available for pseudonym " + nym)
-    } else println("No reply blocks available for pseudonym " + nym)
+      } else throw new NoReplyBlocksException("No reply blocks available for pseudonym " + nym)
+    } else throw new NoReplyBlocksException("No reply blocks available for pseudonym " + nym)
   }
 
 }
