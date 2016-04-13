@@ -2,9 +2,10 @@ package sphinx.clientAndServer
 
 import scala.collection.mutable.HashSet
 import scala.util.Random
-
 import sphinx.exceptions.NoSuchClientException
 import sphinx.params.Params
+import sphinx.exceptions.IdLengthException
+import sphinx.exceptions.MacMismatchException
 
 /**
  * Note: any protected methods should be private, but were made protected for use in the testing version
@@ -21,7 +22,7 @@ class SphinxServer(p: Params) {
   assert(id(0) == -1)
   val name = "node " + Params.byteArrayToStringOfHex(id)
 
-  protected val x = params.group.genSecret // private key (should be private, but made protected for testing)
+  /*protected*/ val x = params.group.genSecret // private key (should be private, but made protected for testing)
   val y = params.group.expon(params.group.g, x) // public key
 
   val seen = new HashSet[String]
@@ -30,8 +31,12 @@ class SphinxServer(p: Params) {
   /**
    * used to enforce the prefix property, node identifiers start with a -1
    */
-  protected def nodeNameEncode(id: Array[Byte]): Array[Byte] = Array[Byte]((-1).asInstanceOf[Byte]) ++ id ++ Array.fill(Params.k - (id.length + 1))(0.asInstanceOf[Byte])
-
+  protected def nodeNameEncode(id: Array[Byte]): Array[Byte] = {
+    val mod_id = if (id == null) Array.fill(0)(0.asInstanceOf[Byte]) else id
+    if (mod_id.length >= Params.k - 1) throw new IdLengthException("Max length of id is " + Params.k)
+    Array[Byte]((-1).asInstanceOf[Byte]) ++ mod_id ++ Array.fill(Params.k - (mod_id.length + 1))(0.asInstanceOf[Byte])
+  }
+  
   /**
    * Decodes the prefix-free encoding
    * Returns the type, value and the remainder of the input string
@@ -69,7 +74,7 @@ class SphinxServer(p: Params) {
     // Verifying MAC
     val mac = Params.mu(Params.muKey(s, params), beta, params)
     if (gamma.deep != mac.deep) {
-      println("MAC Mismatch at: " + name)
+      throw new MacMismatchException("MAC Mismatch at: " + name)
     }
 
     seen += tag

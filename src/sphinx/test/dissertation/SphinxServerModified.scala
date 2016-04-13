@@ -1,15 +1,28 @@
 package sphinx.test.dissertation
 
 import sphinx.clientAndServer.SphinxServer
+import sphinx.exceptions.IdLengthException
 import sphinx.exceptions.NoSuchClientException
 import sphinx.params.Params
+import sphinx.exceptions.MacMismatchException
 
 /**
- * A modified version of the Sphinx server which does not forward to the
- * next stage, in order to test the processing overhead at a single node
+ * A modified version of the Sphinx server for testing. 
+ * 
+ * Does not forward to the next stage, in order to test the processing overhead at a single node
+ * Has a public nodeNameEncode method, in order to unit test.
  */
 class SphinxServerModified(p: Params) extends SphinxServer(p) {
+  
+  override val x = params.group.genSecret // private key (should be private, but made protected for testing)
+  
+  override def nodeNameEncode(id: Array[Byte]): Array[Byte] = {
+    val mod_id = if (id == null) Array.fill(0)(0.asInstanceOf[Byte]) else id
+    if (mod_id.length >= Params.k - 1) throw new IdLengthException("Max length of id is " + Params.k)
+    Array[Byte]((-1).asInstanceOf[Byte]) ++ mod_id ++ Array.fill(Params.k - (mod_id.length + 1))(0.asInstanceOf[Byte])
+  }
 
+  
   override def process(header: (Array[Byte], Array[Byte], Array[Byte]), delta: Array[Byte]) {
     // println("Processing at server: " + name)
 
@@ -33,8 +46,7 @@ class SphinxServerModified(p: Params) extends SphinxServer(p) {
     // Verifying MAC
     val mac = Params.mu(Params.muKey(s, params), beta, params)
     if (gamma.deep != mac.deep) {
-      println("MAC Mismatch at: " + name)
-      return
+      throw new MacMismatchException("MAC Mismatch at: " + name)
     }
 
     seen += tag
@@ -51,7 +63,7 @@ class SphinxServerModified(p: Params) extends SphinxServer(p) {
     val (msgType, value, rest) = prefixDecode(b)
 
     if (msgType == "node") {
-      println("msgType == node")
+      //println("msgType == node")
       val nextHop = Params.pki.get(Params.byteArrayToStringOfHex(value)).get
       //println("Next hop is: " + nextHop.name)
       val b2 = Params.hb(alpha, s, params)
@@ -65,24 +77,24 @@ class SphinxServerModified(p: Params) extends SphinxServer(p) {
     }
 
     if (msgType == "dSpec") {
-      println("msgType == dspec")
+      //println("msgType == dspec")
       val delta2 = Params.pii(Params.piKey(s, params), delta)
       if (delta2.slice(0, Params.k).deep == Array.fill[Byte](Params.k)(0).deep) {
         val (msgType2, destination, message) = prefixDecode(delta2.slice(Params.k, delta2.length))
         if (msgType2 == "dest") {
           val body = Params.unpadMsgBody(message)
-          println("Messsage: " + Params.byteArrayToString(body))
-          println("Destination: " + Params.byteArrayToString(destination))
+          //println("Messsage: " + Params.byteArrayToString(body))
+          //println("Destination: " + Params.byteArrayToString(destination))
           return
         }
       }
     }
 
     if (msgType == "dest") {
-      println("msgType == dest")
+      //println("msgType == dest")
       val id = rest.slice(0, Params.k)
       val delta2 = Params.pii(Params.piKey(s, params), delta)
-      println("Deliver reply message to " + Params.byteArrayToStringOfHex(value))
+      //println("Deliver reply message to " + Params.byteArrayToStringOfHex(value))
       if (Params.clients.contains(Params.byteArrayToStringOfHex(value))) {
         val client = Params.clients.get(Params.byteArrayToStringOfHex(value)).get
         // return client.process(id, delta2)

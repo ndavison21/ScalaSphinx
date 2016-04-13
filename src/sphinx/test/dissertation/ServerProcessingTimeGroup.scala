@@ -9,14 +9,20 @@ object ServerProcessingTimeGroup {
     Framework.writeToFile("output/serverProcessingTimeGroup.csv", "r,avg. time, variance\n")
 
     for (r <- 1 to 10) {
-      var mean = 0L
-      var variance = 0L
+      var mean = 0D
+      var variance = 0D
+      var max = 0D
+      var min = Double.MaxValue
+      
+      runTest(r) // running once to initialise objects, so we can assume the same conditions for each iteration
 
-      for (i <- 1 to 1000) {
+      for (i <- 1 to 10000) {
         val time = runTest(r)
         val prev_mean = mean
         mean = mean + (time - mean) / i
         variance = ((i-1)*variance + (time - prev_mean)*(time - mean))/i
+        if (time > max) max = time
+        if (time < min) min = time
       }
 
       val samplevar = variance
